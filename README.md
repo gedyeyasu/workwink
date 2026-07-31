@@ -1,33 +1,34 @@
-# Neighborhood Pulse
+# Career Crush
 
-> A real-time decision agent for people choosing where to live, work, or open a small business.
+> A real-time job discovery agent that learns what you would actually accept.
 
-Neighborhood Pulse turns noisy, fast-changing public web data into a concise answer to one difficult question:
+Career Crush turns noisy, fast-changing job listings into an evidence-backed swipe feed:
 
-> **"What changed here, and does it change my decision?"**
+> **"Is this a role I would actually say yes to?"**
 
-It fetches fresh signals from Apify Actors (rental listings, local news, community posts, events, and public notices), records them in Elasticsearch as an attributable memory, and answers with source-linked, time-aware evidence.
+It fetches fresh listings from Apify Actors, records them in Elasticsearch as attributable job documents, and ranks them against a user's resume, preferences, and swipe behavior. Every match score is explainable.
 
 ## Why this fits the Elastic × Apify challenge
 
-- **Apify** provides live, on-demand data from the web—the agent never has to pretend that last week's snapshot is current.
-- **Elasticsearch** is the agent's durable memory and retrieval layer: it keeps dated observations, performs hybrid retrieval over a user's preferences and current signals, and exposes *what changed* rather than merely summarizing a page.
-- **The outcome is actionable:** a renter, remote worker, or local entrepreneur can compare neighborhoods using the changes that actually matter to them.
+- **Apify** provides live, on-demand job data—the feed is not a stale job-board snapshot.
+- **Elasticsearch** performs hybrid retrieval and stores jobs, profiles, and swipe history so ranking adapts after every decision.
+- **The outcome is actionable:** each card shows a match score, supporting evidence, risks, and a tailored application draft.
 
 ## Hack-night demo
 
-1. Add a decision profile: "remote worker, dog owner, $2,400 budget, wants a quiet neighborhood."
-2. Ingest fresh Apify datasets for two neighborhoods.
-3. Ask: "What changed in East Austin in the last 48 hours, and should I tour this weekend?"
-4. Show a short answer backed by retrieved, timestamped source cards: a rent drop, a construction notice, a relevant event, and a community concern.
+1. Create an account and upload a resume.
+2. Set preferences: "platform engineering, remote or Austin, $140k minimum."
+3. Swipe through fresh jobs.
+4. Open a high-match role to see the evidence-backed score.
+5. Generate a tailored application package for user approval.
 
 ## Initial architecture
 
 ```text
-Apify Actors → normalize + deduplicate → Elasticsearch signal memory → hybrid retrieval → decision brief
+Apify Actors → normalize + deduplicate → Elasticsearch job memory → hybrid retrieval → adaptive swipe feed → application draft
 ```
 
-The first slice in this repository keeps the source adapters small and testable. It normalizes raw records into provenance-preserving signals and prepares an Elasticsearch mapping suited to hybrid retrieval.
+The first slice keeps source adapters small and testable. It normalizes raw records into provenance-preserving job documents, prepares an Elasticsearch mapping suited to hybrid retrieval, and includes a demo web app with realistic job data.
 
 ## Local development
 
@@ -35,13 +36,18 @@ Requires Node.js 20+.
 
 ```bash
 npm test
+
+npm run dev
 ```
 
 No credentials are needed for the initial tests. Add `APIFY_TOKEN` and `ELASTICSEARCH_URL` to `.env` only when connecting the live ingestion path.
+
+The live seams are in `src/apify.js` and `src/elastic.js`: run an Apify Actor, fetch its dataset, normalize the records, and index them into Elasticsearch. The web app stays in demo mode until those credentials are intentionally wired into the server.
 
 ## Next build steps
 
 - Connect selected Apify Actors and ingest their datasets.
 - Create the Elasticsearch index and enable semantic/hybrid retrieval.
-- Add a lightweight UI showing a decision profile, fresh evidence, and an explanation.
+- Connect the profile and swipe events to a hosted store.
+- Add a browser handoff for assisted application submission.
 - Deploy a shareable demo before submission.
