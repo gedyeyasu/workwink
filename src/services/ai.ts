@@ -8,7 +8,7 @@ const jobProfileSchema = z.object({
   oneLiner: z.string().trim().min(10).max(220),
   mission: z.string().trim().min(10).max(500),
   highlights: z.array(z.string().trim().min(3).max(220)).min(2).max(5),
-  mustHaveSkills: z.array(z.string().trim().min(1).max(80)).max(10),
+  mustHaveSkills: z.array(z.string().trim().min(1).max(220)).max(10),
   whyYouMightLoveIt: z.string().trim().min(10).max(400),
   interviewSignals: z.array(z.string().trim().min(3).max(180)).max(6),
   evidence: z.array(z.object({
