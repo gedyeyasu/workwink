@@ -4,6 +4,8 @@ import {
   type ActorRun,
   type Schedule,
   type ScheduleCreateOrUpdateData,
+  type Task,
+  type TaskUpdateData,
   type Webhook
 } from "apify-client";
 import {
@@ -61,6 +63,20 @@ export interface UpsertScheduleResult {
   created: boolean;
 }
 
+export interface UpsertOfficialWebScraperTaskOptions extends WebScraperInputOptions {
+  token: string;
+  startUrls: readonly string[];
+  taskId?: string;
+  taskName?: string;
+  client?: ApifyClient;
+}
+
+export interface UpsertTaskResult {
+  task: Task;
+  created: boolean;
+  consoleUrl: string;
+}
+
 export interface UpsertSuccessWebhookOptions {
   token: string;
   requestUrl: string;
@@ -75,6 +91,8 @@ export interface UpsertSuccessWebhookResult {
 
 export const SIX_HOUR_CRON = "0 */6 * * *" as const;
 export const DEFAULT_SCHEDULE_NAME = "workwink-six-hour-job-scrape" as const;
+export const DEFAULT_TASK_NAME = "workwink-sponsor-job-scraper" as const;
+export const APIFY_TASK_CONSOLE_BASE_URL = "https://console.apify.com/actors/tasks" as const;
 export const WEBHOOK_DESCRIPTION = "WorkWink: import successful official Web Scraper runs" as const;
 
 export function createApifyClient(token: string): ApifyClient {
@@ -158,6 +176,70 @@ export async function listAllDatasetItems(
   }
 
   return allItems;
+}
+
+/**
+ * Save the production crawl as an Actor Task that can be launched directly in
+ * Apify Console. Re-running this operation updates the same task by explicit ID
+ * or exact name and never creates an unbounded stream of duplicate demo tasks.
+ */
+export async function upsertOfficialWebScraperTask(
+  options: UpsertOfficialWebScraperTaskOptions
+): Promise<UpsertTaskResult> {
+  const client = options.client ?? createApifyClient(options.token);
+  const input = buildWebScraperInput(options.startUrls, options);
+  const officialActor = await client.actor(OFFICIAL_WEB_SCRAPER_ACTOR_ID).get();
+  if (!officialActor) {
+    throw new Error(`Could not resolve the official ${OFFICIAL_WEB_SCRAPER_ACTOR_ID} Actor.`);
+  }
+
+  const taskName = options.taskName?.trim() || DEFAULT_TASK_NAME;
+  if (!/^[a-zA-Z0-9_-]+$/.test(taskName)) {
+    throw new Error("Apify taskName may contain only letters, numbers, underscores, and hyphens.");
+  }
+
+  const fields: TaskUpdateData = {
+    name: taskName,
+    title: "WorkWink — live Apify + Elastic sponsor jobs",
+    description:
+      "Runs Apify's official Web Scraper against the public Apify and Elastic careers sources and emits provenance-backed JobPosting records for WorkWink.",
+    input: { ...input },
+    options: {
+      build: officialActor.defaultRunOptions.build,
+      timeoutSecs: 900,
+      memoryMbytes: 2_048,
+      restartOnError: false
+    }
+  };
+
+  let existing: Task | undefined;
+  if (options.taskId?.trim()) {
+    existing = await client.task(options.taskId.trim()).get();
+    if (!existing) throw new Error(`Configured Apify task ${options.taskId.trim()} was not found.`);
+  } else {
+    const page = await client.tasks().list({ limit: 1_000 });
+    const matches = page.items.filter((task) => task.name === taskName);
+    if (matches.length > 1) {
+      throw new Error(
+        `Found ${matches.length} Apify tasks named ${taskName}; set APIFY_TASK_ID to choose one safely.`
+      );
+    }
+    const match = matches[0];
+    if (match) existing = await client.task(match.id).get();
+  }
+
+  if (existing) {
+    if (existing.actId !== officialActor.id) {
+      throw new Error(
+        `Refusing to update Apify task ${existing.id}: it does not use the official ${OFFICIAL_WEB_SCRAPER_ACTOR_ID} Actor.`
+      );
+    }
+    const task = await client.task(existing.id).update(fields);
+    return { task, created: false, consoleUrl: `${APIFY_TASK_CONSOLE_BASE_URL}/${task.id}` };
+  }
+
+  const task = await client.tasks().create({ actId: officialActor.id, ...fields });
+  return { task, created: true, consoleUrl: `${APIFY_TASK_CONSOLE_BASE_URL}/${task.id}` };
 }
 
 /** Create or update an exclusive UTC schedule that runs the same official Actor every six hours. */

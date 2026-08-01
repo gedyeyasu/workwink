@@ -38,7 +38,9 @@ This document separates what is implemented from the reviewed startup architectu
 | Secure PDF résumé profile | Implemented | Multipart upload, 5 MiB/12-page limits, in-memory PDF.js extraction, evidence spans, no raw résumé storage |
 | Evidence-backed match score | Implemented for the live session | Deterministic skill, target-role, and work-mode components; persistent learning remains next |
 | Nemotron profiles through Elastic | Implemented | Native Elastic NVIDIA inference, strict response schema, evidence validation, content-hash cache index |
-| Durable swipe learning | Planned | Current swipes move cards locally; right swipe opens the real source role |
+| Durable right-swipe queue | Implemented | Strict Elastic index, signed HttpOnly session isolation, immutable job snapshot, idempotent `(session, job)` identity |
+| Approval workflow | Implemented through approval | Optimistic-concurrency state machine prevents skipping package review and approval states |
+| Automatic application dispatch | Actor scaffold only | Private Apify Actor is approval-gated; account/private résumé storage and internal lease endpoints are required before dispatch |
 
 ## Product experience
 
@@ -119,6 +121,8 @@ WorkWink then uses `apify-client` to read the dataset in bounded pages. It incre
 ```
 
 That expression triggers four refreshes each day. The schedule runs the official Actor with the same validated board input and production limits. The code can update an explicitly configured schedule ID or discover an existing schedule by name, which prevents duplicate schedules during repeated setup.
+
+`pnpm apify:task` similarly creates or updates the saved `workwink-sponsor-job-scraper` Task. The Task is bound to the official Actor and refuses to overwrite a same-named task belonging to any other Actor. This gives judges a one-click Apify Console demonstration while preserving the same reviewed inputs used by the API and schedule.
 
 When both `APIFY_WEBHOOK_URL` and `APIFY_WEBHOOK_SECRET` are configured, the schedule provisioner also creates or updates a persistent `ACTOR.RUN.SUCCEEDED` webhook. Apify sends the secret in a dedicated header. The Fastify callback uses constant-time secret comparison, extracts the run ID, and invokes the same idempotent importer. The importer does not trust the callback alone: it fetches the run through Apify, verifies `SUCCEEDED`, verifies the official Actor identity, and then reads the referenced dataset. Without a deployed webhook URL, operators can still import through `pnpm ingest:run -- <RUN_ID>` or the protected admin endpoint.
 

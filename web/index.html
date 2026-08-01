@@ -19,9 +19,12 @@
       <span class="brand-mark" aria-hidden="true">W</span>
       <span>WorkWink</span>
     </a>
-    <div class="source-status" id="sourceStatus" role="status">
-      <span class="status-dot"></span>
-      <span>Checking live index…</span>
+    <div class="topbar-actions">
+      <button class="queue-pill" id="queueButton" type="button"><span>♥</span> Application queue <b id="queueCount">0</b></button>
+      <div class="source-status" id="sourceStatus" role="status">
+        <span class="status-dot"></span>
+        <span>Checking live index…</span>
+      </div>
     </div>
   </header>
 
@@ -110,6 +113,15 @@
         <label class="field-label" for="salaryMin">Minimum salary <output id="salaryOutput">Any</output></label>
         <input id="salaryMin" class="salary-range" type="range" min="0" max="250000" step="10000" value="0">
         <div class="range-labels"><span>$0</span><span>$250k+</span></div>
+
+        <section class="application-queue" id="applicationQueue" aria-labelledby="queueHeading">
+          <div class="queue-heading">
+            <div><span class="section-kicker">RIGHT SWIPES</span><h3 id="queueHeading">Application queue</h3></div>
+            <span id="queueStatus">0 saved</span>
+          </div>
+          <div class="queue-list" id="queueList"><p>Swipe right to save a role for review.</p></div>
+          <small>Nothing is submitted until you approve the application package.</small>
+        </section>
       </aside>
 
       <section class="results-panel">
@@ -143,7 +155,7 @@
         <div class="swipe-actions hidden" id="swipeActions" aria-label="Job card actions">
           <button class="round-action pass" id="passJob" type="button" aria-label="Pass on this job">×</button>
           <span>SWIPE OR TAP</span>
-          <button class="round-action save" id="saveJob" type="button" aria-label="Open this job">♥</button>
+          <button class="round-action save" id="saveJob" type="button" aria-label="Save this job to the application queue">♥</button>
         </div>
         <button class="load-more hidden" id="loadMore" type="button">Load more matches</button>
       </section>

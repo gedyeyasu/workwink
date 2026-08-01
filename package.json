@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "setup:elastic": "tsx scripts/setup-elastic.ts",
     "apify:run": "tsx scripts/run-apify.ts",
+    "apify:task": "tsx scripts/provision-apify-task.ts",
     "apify:schedule": "tsx scripts/provision-apify-schedule.ts",
     "ingest:run": "tsx scripts/ingest-apify-run.ts",
     "smoke:live": "tsx scripts/smoke-live.ts"

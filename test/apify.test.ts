@@ -8,9 +8,11 @@ import {
   parseJobBoardUrls
 } from "../src/apify/web-scraper-input.js";
 import {
+  APIFY_TASK_CONSOLE_BASE_URL,
   assertOfficialWebScraperActor,
   getBoardUrlsFromCliOrEnv,
-  listAllDatasetItems
+  listAllDatasetItems,
+  upsertOfficialWebScraperTask
 } from "../src/integrations/apify.js";
 
 describe("official Apify Web Scraper input", () => {
@@ -115,6 +117,46 @@ describe("Apify dataset pagination", () => {
   });
 });
 
+describe("saved official Apify Actor task", () => {
+  it("creates a Console-runnable task with the production scraper input", async () => {
+    const create = vi.fn(async (fields: Record<string, unknown>) => task("task-new", fields));
+    const client = taskClient({ create });
+
+    const result = await upsertOfficialWebScraperTask({
+      token: "test-token",
+      startUrls: ["https://jobs.ashbyhq.com/apify"],
+      client
+    });
+
+    expect(result.created).toBe(true);
+    expect(result.consoleUrl).toBe(`${APIFY_TASK_CONSOLE_BASE_URL}/task-new`);
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      actId: "official-actor-id",
+      name: "workwink-sponsor-job-scraper",
+      input: expect.objectContaining({
+        runMode: "PRODUCTION",
+        startUrls: [{ url: "https://jobs.ashbyhq.com/apify" }]
+      })
+    }));
+  });
+
+  it("updates an existing exact-name task instead of creating a duplicate", async () => {
+    const update = vi.fn(async (fields: Record<string, unknown>) => task("task-existing", fields));
+    const create = vi.fn();
+    const client = taskClient({ existingId: "task-existing", update, create });
+
+    const result = await upsertOfficialWebScraperTask({
+      token: "test-token",
+      startUrls: ["https://jobs.ashbyhq.com/apify"],
+      client
+    });
+
+    expect(result.created).toBe(false);
+    expect(update).toHaveBeenCalledOnce();
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
 function job(id: string) {
   return {
     schemaVersion: 1 as const,
@@ -129,4 +171,41 @@ function job(id: string) {
     jobPosting: { "@type": "JobPosting", title: `Job ${id}` },
     provenance: { actor: OFFICIAL_WEB_SCRAPER_ACTOR_ID }
   };
+}
+
+function task(id: string, fields: Record<string, unknown> = {}) {
+  return {
+    id,
+    userId: "user-1",
+    actId: "official-actor-id",
+    name: "workwink-sponsor-job-scraper",
+    createdAt: new Date("2026-07-31T00:00:00.000Z"),
+    modifiedAt: new Date("2026-07-31T00:00:00.000Z"),
+    stats: { totalRuns: 0 },
+    ...fields
+  };
+}
+
+function taskClient(options: {
+  existingId?: string;
+  update?: (fields: Record<string, unknown>) => Promise<ReturnType<typeof task>>;
+  create: (fields: Record<string, unknown>) => Promise<ReturnType<typeof task>> | void;
+}): ApifyClient {
+  const existing = options.existingId ? task(options.existingId) : undefined;
+  return {
+    actor: () => ({
+      get: vi.fn(async () => ({
+        id: "official-actor-id",
+        defaultRunOptions: { build: "latest" }
+      }))
+    }),
+    tasks: () => ({
+      list: vi.fn(async () => ({ items: existing ? [existing] : [] })),
+      create: options.create
+    }),
+    task: () => ({
+      get: vi.fn(async () => existing),
+      update: options.update
+    })
+  } as unknown as ApifyClient;
 }

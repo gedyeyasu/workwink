@@ -2,7 +2,7 @@
 
 **Swipe into work worth wanting.**
 
-WorkWink is a real-time job discovery application for the Elastic × Apify hackathon. Apify's official Web Scraper Actor collects public job postings from company ATS boards. WorkWink validates and normalizes that dataset, bulk-indexes it into Elasticsearch, and serves a swipe feed whose search, counts, filters, and provenance all come from the live index.
+WorkWink is a real-time job discovery application for the Elastic × Apify hackathon. Apify's official Web Scraper Actor collects public job postings from company ATS boards. WorkWink validates and normalizes that dataset, bulk-indexes it into Elasticsearch, and serves a swipe feed whose search, counts, filters, and provenance all come from the live index. A PDF résumé creates an evidence-backed candidate profile, Elastic's native NVIDIA inference endpoint turns source jobs into concise Nemotron profiles, and right swipes enter a private, durable application queue.
 
 There is deliberately no runtime demo-data mode. Missing credentials or an unavailable integration produces an explicit error state.
 
@@ -15,7 +15,16 @@ Apify official Web Scraper Actor
   -> Elasticsearch versioned job index
   -> lexical/hybrid retrieval + disjunctive aggregations
   -> instant facet filters + swipe feed
+  -> signed-session application queue + approval state machine
 ```
+
+## Live hackathon proof
+
+- Saved official Actor Task: [WorkWink Sponsor Job Scraper](https://console.apify.com/actors/tasks/TvuuqUw3sThzhzUqr)
+- Sponsor run: `oQOKuuV18iF7mq0HV`; dataset: `ms1hr1R6oVhex0nj9`
+- Sponsor import: 261 accepted and indexed, zero rejected, zero bulk failures
+- Elastic indices: `workwink-jobs-v1`, `workwink-ingestion-runs`, `workwink-ai-job-profiles-v1`, and `workwink-applications-v1`
+- Native Elastic NVIDIA inference endpoint: `workwink-nemotron`
 
 ## Requirements
 
@@ -34,6 +43,7 @@ ELASTICSEARCH_URL=https://...
 ELASTIC_TOKEN=...
 ADMIN_TOKEN=at-least-24-characters
 CURSOR_SECRET=at-least-32-characters
+APPLICATION_SESSION_SECRET=another-at-least-32-character-secret
 ```
 
 `ELASTIC_TOKEN` is accepted as an alias for `ELASTICSEARCH_API_KEY`.
@@ -44,6 +54,7 @@ CURSOR_SECRET=at-least-32-characters
 pnpm install
 pnpm setup:elastic
 pnpm apify:run
+pnpm apify:task
 pnpm ingest:run -- <APIFY_RUN_ID>
 pnpm dev
 ```
@@ -51,6 +62,14 @@ pnpm dev
 Then open `http://localhost:4173`.
 
 The Apify command prints the run and dataset ids, never the token. The ingest command fetches the finished dataset through the official client, rejects malformed records, and reports Elasticsearch bulk failures instead of masking them.
+
+`pnpm apify:task` idempotently creates or updates the Console-runnable sponsor Task while verifying that it remains bound to the official `apify/web-scraper` Actor.
+
+## Application automation
+
+Right swipes are idempotently stored in `workwink-applications-v1`, isolated by a signed HttpOnly browser-session cookie. The implemented state machine prevents skipping review: `saved → package_ready → awaiting_approval → approved`.
+
+[`actors/workwink-apply`](actors/workwink-apply) contains the private Apify Apply Actor. It supports explicit Greenhouse, Ashby, and Lever adapters, defaults to `PREPARE`, stops on CAPTCHA or missing fields, and requires both a one-time approval token and a server-issued single-application authorization before its only possible submit click. It is intentionally not dispatched yet: account/private résumé storage and the documented lease/result API endpoints must be implemented first.
 
 ## Six-hour collection
 

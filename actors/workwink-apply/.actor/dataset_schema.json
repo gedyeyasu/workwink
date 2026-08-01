@@ -1,0 +1,46 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "applicationId": { "type": "string", "title": "Application ID", "description": "Opaque WorkWink application identifier." },
+      "leaseId": { "type": "string", "title": "Lease ID", "description": "Server-issued automation lease identifier." },
+      "mode": { "type": "string", "enum": ["PREPARE", "SUBMIT"] },
+      "provider": { "type": "string", "enum": ["greenhouse", "ashby", "lever"] },
+      "status": { "type": "string", "enum": ["PREPARED", "SUBMITTED", "NEEDS_USER", "FAILED"] },
+      "reasonCode": { "type": "string", "title": "Reason code" },
+      "filledFields": { "type": "array", "items": { "type": "string" } },
+      "missingRequiredFields": { "type": "array", "items": { "type": "string" } },
+      "captchaDetected": { "type": "boolean" },
+      "finalUrl": { "type": "string", "format": "uri" },
+      "confirmationText": { "type": "string" },
+      "screenshotKey": { "type": "string" },
+      "startedAt": { "type": "string", "format": "date-time" },
+      "finishedAt": { "type": "string", "format": "date-time" }
+    },
+    "required": ["applicationId", "leaseId", "mode", "status", "reasonCode", "filledFields", "missingRequiredFields", "captchaDetected", "startedAt", "finishedAt"]
+  },
+  "views": {
+    "overview": {
+      "title": "Application runs",
+      "transformation": {
+        "fields": ["applicationId", "mode", "provider", "status", "reasonCode", "captchaDetected", "finalUrl", "finishedAt"]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "applicationId": { "label": "Application" },
+          "mode": { "label": "Mode" },
+          "provider": { "label": "ATS" },
+          "status": { "label": "Status" },
+          "reasonCode": { "label": "Reason" },
+          "captchaDetected": { "label": "CAPTCHA" },
+          "finalUrl": { "label": "Final URL", "format": "link" },
+          "finishedAt": { "label": "Finished" }
+        }
+      }
+    }
+  }
+}

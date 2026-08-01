@@ -1,0 +1,29 @@
+{
+  "name": "workwink-apply-actor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private, approval-gated Apify Actor for preparing ATS applications",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "start:dev": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "apify": "3.7.2",
+    "crawlee": "3.17.0",
+    "playwright": "1.61.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.2",
+    "tsx": "4.23.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}

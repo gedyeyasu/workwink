@@ -24,10 +24,15 @@
     passJob: $("#passJob"),
     saveJob: $("#saveJob"),
     loadMore: $("#loadMore"),
-    template: $("#jobCardTemplate")
-    ,resumeForm: $("#resumeForm")
-    ,resumeFile: $("#resumeFile")
-    ,profileResult: $("#profileResult")
+    template: $("#jobCardTemplate"),
+    resumeForm: $("#resumeForm"),
+    resumeFile: $("#resumeFile"),
+    profileResult: $("#profileResult"),
+    queueButton: $("#queueButton"),
+    queueCount: $("#queueCount"),
+    queueStatus: $("#queueStatus"),
+    queueList: $("#queueList"),
+    applicationQueue: $("#applicationQueue")
   };
 
   const state = {
@@ -39,7 +44,9 @@
     requestSerial: 0,
     hasSearched: false,
     loadingMore: false,
-    profile: null
+    profile: null,
+    applications: [],
+    queueBusy: false
   };
 
   function splitValues(value) {
@@ -382,10 +389,70 @@
     state.debounceTimer = setTimeout(() => performSearch(), 150);
   }
 
-  function dismiss(direction, openRole = false) {
+  function renderApplicationQueue() {
+    els.queueCount.textContent = String(state.applications.length);
+    els.queueStatus.textContent = `${state.applications.length} saved`;
+    els.queueList.innerHTML = "";
+    if (!state.applications.length) {
+      els.queueList.innerHTML = "<p>Swipe right to save a role for review.</p>";
+      return;
+    }
+    state.applications.slice(0, 8).forEach((application) => {
+      const snapshot = application.jobSnapshot || application.job || {};
+      const item = document.createElement("article");
+      const copy = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = snapshot.title || "Saved role";
+      const company = document.createElement("span");
+      company.textContent = snapshot.companyName || application.status || "Application candidate";
+      copy.append(title, company);
+      const status = document.createElement("b");
+      status.textContent = String(application.status || "saved").replaceAll("_", " ");
+      item.append(copy, status);
+      els.queueList.append(item);
+    });
+  }
+
+  async function loadApplicationQueue() {
+    try {
+      const response = await fetch("/api/applications", { headers: { accept: "application/json" } });
+      if (!response.ok) return;
+      const body = await response.json();
+      state.applications = body.items || [];
+      renderApplicationQueue();
+    } catch { /* Search remains usable when the private queue is unavailable. */ }
+  }
+
+  async function queueJob(job) {
+    if (state.queueBusy) return false;
+    state.queueBusy = true;
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ jobId: job.jobId })
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body?.error?.message || "Could not save this application.");
+      await loadApplicationQueue();
+      return true;
+    } catch (error) {
+      els.degraded.classList.remove("hidden");
+      els.degraded.textContent = error.message || "Could not save this application.";
+      return false;
+    } finally {
+      state.queueBusy = false;
+    }
+  }
+
+  async function dismiss(direction) {
     const topCard = $(".job-card:last-child", els.stage);
     if (!topCard || !state.jobs.length) return;
-    if (openRole) window.open(topCard.dataset.applyUrl, "_blank", "noopener,noreferrer");
+    if (direction === "right" && !await queueJob(state.jobs[0])) {
+      topCard.style.transform = "";
+      $(".stamp-save", topCard).style.opacity = "";
+      return;
+    }
     topCard.classList.add(direction === "right" ? "exit-right" : "exit-left");
     setTimeout(() => {
       state.jobs.shift();
@@ -417,7 +484,7 @@
       if (!dragging) return;
       dragging = false;
       card.classList.remove("dragging");
-      if (Math.abs(currentX) > 100) dismiss(currentX > 0 ? "right" : "left");
+      if (Math.abs(currentX) > 100) void dismiss(currentX > 0 ? "right" : "left");
       else {
         card.style.transform = "";
         $(".stamp-save", card).style.opacity = "";
@@ -469,9 +536,10 @@
     els.sort.value = "relevance";
     scheduleSearch();
   });
-  els.passJob.addEventListener("click", () => dismiss("left"));
-  els.saveJob.addEventListener("click", () => dismiss("right", true));
+  els.passJob.addEventListener("click", () => void dismiss("left"));
+  els.saveJob.addEventListener("click", () => void dismiss("right"));
   els.loadMore.addEventListener("click", () => void performSearch({ append: true }));
+  els.queueButton.addEventListener("click", () => els.applicationQueue.scrollIntoView({ behavior: "smooth", block: "center" }));
   els.resumeFile.addEventListener("change", () => {
     const file = els.resumeFile.files?.[0];
     if (file) $(".resume-picker").textContent = file.name;
@@ -514,5 +582,6 @@
   restoreUrlState();
   renderActiveFilters();
   void checkHealth();
+  void loadApplicationQueue();
   void performSearch();
 })();

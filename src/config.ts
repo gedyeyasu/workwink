@@ -21,7 +21,8 @@ const schema = z.object({
   ELASTIC_NVIDIA_INFERENCE_ID: z.string().min(1).default("workwink-nemotron"),
   ELASTIC_SEARCH_MODE: z.enum(["lexical", "hybrid"]).default("lexical"),
   ADMIN_TOKEN: z.string().min(24).optional(),
-  CURSOR_SECRET: z.string().min(32).optional()
+  CURSOR_SECRET: z.string().min(32).optional(),
+  APPLICATION_SESSION_SECRET: z.string().min(32).optional()
 });
 
 const parsed = schema.safeParse(process.env);
@@ -32,10 +33,14 @@ if (!parsed.success) {
 export const config = {
   ...parsed.data,
   elasticApiKey: parsed.data.ELASTICSEARCH_API_KEY ?? parsed.data.ELASTIC_TOKEN,
+  applicationSessionSecret: parsed.data.APPLICATION_SESSION_SECRET
+    ?? parsed.data.CURSOR_SECRET
+    ?? (parsed.data.NODE_ENV === "production" ? undefined : "workwink-local-session-secret-never-use-in-production"),
   jobsAlias: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-jobs-read`,
   jobsWriteAlias: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-jobs-write`,
   runsIndex: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-ingestion-runs`,
-  jobProfilesIndex: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-ai-job-profiles-v1`
+  jobProfilesIndex: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-ai-job-profiles-v1`,
+  applicationsIndex: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-applications-v1`
 };
 
 export function requireApifyConfig() {

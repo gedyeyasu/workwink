@@ -22,6 +22,7 @@ Verified on 2026-07-31 against the configured Apify account and Elastic Serverle
 - Sponsor crawl result: 29 requests succeeded, 0 failed; 260 Actor dataset records
 - Sponsor import result: 261 collected, 261 accepted, 261 indexed, 0 rejected, 0 bulk failures
 - The six-hour schedule now targets the Apify and Elastic sponsor sources
+- Saved official-Actor Task: `TvuuqUw3sThzhzUqr` (`workwink-sponsor-job-scraper`), runnable directly from Apify Console
 
 The first probe against Anthropic's Greenhouse board crawled 56 pages with zero request failures but emitted no `JobPosting` JSON-LD. WorkWink did not invent fallback records; the source was replaced with a board that publishes the required structured contract.
 
@@ -36,6 +37,7 @@ The first probe against Anthropic's Greenhouse board crawled 56 pages with zero 
 - AI profile cache: `workwink-ai-job-profiles-v1`
 - Native NVIDIA inference endpoint: `workwink-nemotron`
 - Live document count after the sponsor import: 272 (stable IDs retain prior verified runs)
+- Private application queue: `workwink-applications-v1`; live idempotency and signed-session isolation verified against Elastic Serverless
 
 Importer result for `pro8KQQYrA91RYFMR`:
 

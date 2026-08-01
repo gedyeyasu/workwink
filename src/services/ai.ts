@@ -155,18 +155,26 @@ export async function getJobProfile(jobId: string): Promise<{ profile: JobProfil
   return { profile, cached: false };
 }
 
+async function countIfPresent(index: string): Promise<number> {
+  const client = getElasticClient();
+  return await client.indices.exists({ index }) ? (await client.count({ index })).count : 0;
+}
+
 export async function integrationProof() {
   const client = getElasticClient();
-  const [info, jobs, runs, profiles] = await Promise.all([
+  const [info, jobs, runs, profiles, applications] = await Promise.all([
     client.info(),
     client.count({ index: config.jobsAlias }),
     client.search({ index: config.runsIndex, size: 1, sort: [{ finishedAt: "desc" }], _source: true }),
-    client.indices.exists({ index: config.jobProfilesIndex }).then((exists) => exists ? client.count({ index: config.jobProfilesIndex }) : { count: 0 })
+    countIfPresent(config.jobProfilesIndex),
+    countIfPresent(config.applicationsIndex)
   ]);
   return {
     apify: {
       actorId: "apify/web-scraper",
       actorUrl: "https://console.apify.com/actors/moJRLRc85AitArpNN",
+      taskId: config.APIFY_TASK_ID ?? null,
+      taskUrl: config.APIFY_TASK_ID ? `https://console.apify.com/actors/tasks/${config.APIFY_TASK_ID}` : null,
       cadence: "0 */6 * * * (UTC)",
       scheduleId: config.APIFY_SCHEDULE_ID ?? null
     },
@@ -179,7 +187,9 @@ export async function integrationProof() {
       ingestionRunsIndex: config.runsIndex,
       aiProfilesIndex: config.jobProfilesIndex,
       jobDocuments: jobs.count,
-      aiProfiles: profiles.count,
+      aiProfiles: profiles,
+      applicationsIndex: config.applicationsIndex,
+      queuedApplications: applications,
       latestIngestion: runs.hits.hits[0]?._source ?? null
     },
     ai: {

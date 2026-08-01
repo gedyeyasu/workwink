@@ -1,0 +1,67 @@
+{
+  "title": "WorkWink Apply input",
+  "description": "Prepare one approved WorkWink application. PREPARE is the safe default and never clicks the final submit button.",
+  "type": "object",
+  "schemaVersion": 1,
+  "additionalProperties": false,
+  "properties": {
+    "applicationId": {
+      "title": "Application ID",
+      "description": "Opaque WorkWink application identifier. No resume or applicant PII is placed in Actor input.",
+      "type": "string",
+      "editor": "textfield",
+      "minLength": 8,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "workwinkApiBaseUrl": {
+      "title": "WorkWink API base URL",
+      "description": "HTTPS WorkWink API that exchanges the short-lived dispatch token for a single application lease.",
+      "type": "string",
+      "editor": "textfield",
+      "pattern": "^https:\\/\\/[^\\s]+$"
+    },
+    "mode": {
+      "title": "Run mode",
+      "description": "PREPARE fills supported fields and stops. SUBMIT additionally requires a per-application approval token and server authorization.",
+      "type": "string",
+      "editor": "select",
+      "enum": ["PREPARE", "SUBMIT"],
+      "enumTitles": ["Prepare only — safe default", "Submit — explicit approval required"],
+      "default": "PREPARE"
+    },
+    "dispatchToken": {
+      "title": "Short-lived dispatch token",
+      "description": "Single-use WorkWink token scoped to this application. Stored encrypted by Apify.",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "minLength": 32,
+      "maxLength": 4096
+    },
+    "approvalToken": {
+      "title": "Per-application submit approval",
+      "description": "Required only for SUBMIT. It must be minted after the user approves this exact application package.",
+      "type": "string",
+      "editor": "textfield",
+      "isSecret": true,
+      "minLength": 32,
+      "maxLength": 4096
+    },
+    "captureAuditScreenshot": {
+      "title": "Capture audit screenshot",
+      "description": "Opt in to storing a private screenshot in the run key-value store. It can contain applicant data.",
+      "type": "boolean",
+      "default": false
+    },
+    "navigationTimeoutSecs": {
+      "title": "Navigation timeout (seconds)",
+      "description": "Maximum time for page navigation and form interactions.",
+      "type": "integer",
+      "minimum": 15,
+      "maximum": 120,
+      "default": 45
+    }
+  },
+  "required": ["applicationId", "workwinkApiBaseUrl", "mode", "dispatchToken"]
+}

@@ -1,0 +1,20 @@
+{
+  "actorSpecification": 1,
+  "name": "workwink-apply",
+  "title": "WorkWink Apply (Private)",
+  "description": "Approval-gated browser automation for preparing one ATS job application.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "meta": {
+    "templateId": "ts-crawlee-playwright-chrome"
+  },
+  "dockerfile": "../Dockerfile",
+  "readme": "../README.md",
+  "input": "./input_schema.json",
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  },
+  "minMemoryMbytes": 1024,
+  "maxMemoryMbytes": 2048
+}

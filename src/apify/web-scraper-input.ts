@@ -1,5 +1,11 @@
 export const OFFICIAL_WEB_SCRAPER_ACTOR_ID = "apify/web-scraper" as const;
 
+/** Sponsor-owned career sources used by the saved hackathon demo task. */
+export const SPONSOR_JOB_BOARD_URLS = [
+  "https://jobs.ashbyhq.com/apify",
+  "https://boards-api.greenhouse.io/v1/boards/elastic/jobs?content=true"
+] as const;
+
 export const SUPPORTED_JOB_BOARD_HOSTS = [
   "boards.greenhouse.io",
   "job-boards.greenhouse.io",

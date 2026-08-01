@@ -101,6 +101,7 @@ a { color: inherit; }
   box-shadow: 0 0 0 4px rgba(217, 255, 67, 0.1);
 }
 .source-status.failed .status-dot { background: var(--coral); box-shadow: 0 0 0 4px rgba(255,114,95,.11); }
+.topbar-actions { display:flex; align-items:center; gap:18px; }.queue-pill { padding:8px 11px; border:1px solid rgba(217,255,67,.25); border-radius:999px; color:var(--muted); background:rgba(217,255,67,.04); font-size:11px; }.queue-pill span { color:var(--acid); }.queue-pill b { min-width:19px; margin-left:5px; padding:2px 5px; display:inline-block; border-radius:999px; color:#111; background:var(--acid); }
 
 .hero {
   width: min(1000px, calc(100% - 40px));
@@ -228,6 +229,7 @@ select:focus, .filter-input:focus { border-color:rgba(217,255,67,.55); }
 .salary-range { width:100%; height:3px; appearance:none; border-radius:5px; background:#313133; accent-color:var(--acid); }
 .salary-range::-webkit-slider-thumb { width:16px; height:16px; appearance:none; border:3px solid var(--night); border-radius:50%; background:var(--acid); box-shadow:0 0 0 1px var(--acid); }
 .range-labels { display:flex; justify-content:space-between; margin-top:7px; color:var(--dim); font-size:10px; }
+.application-queue { margin-top:29px; padding:16px; border:1px solid rgba(158,131,255,.22); border-radius:14px; background:rgba(158,131,255,.045); }.queue-heading { display:flex; align-items:end; justify-content:space-between; gap:8px; }.queue-heading h3 { margin:3px 0 0; font:700 15px "Manrope"; }.queue-heading > span { color:var(--dim); font-size:9px; }.queue-list { margin:13px 0 10px; display:grid; gap:8px; }.queue-list > p { margin:0; color:var(--dim); font-size:10px; line-height:1.5; }.queue-list article { padding:9px; display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid var(--line); border-radius:9px; background:rgba(0,0,0,.12); }.queue-list article div { min-width:0; display:grid; gap:2px; }.queue-list strong,.queue-list span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.queue-list strong { color:#deddd8; font-size:10px; }.queue-list span { color:var(--dim); font-size:9px; }.queue-list b { color:var(--violet); font-size:8px; text-transform:uppercase; }.application-queue > small { display:block; color:var(--dim); font-size:8px; line-height:1.4; }
 
 .results-panel { min-width:0; }
 .results-topline { min-height:55px; display:flex; align-items:end; justify-content:space-between; gap:20px; }
@@ -330,6 +332,7 @@ select:focus, .filter-input:focus { border-color:rgba(217,255,67,.55); }
   .topbar, .hero, .workspace { width:min(100% - 24px, 1240px); }
   .topbar { height:66px; }
   .source-status span:last-child { display:none; }
+  .queue-pill { font-size:0; }.queue-pill span,.queue-pill b { font-size:11px; }
   .hero { padding:45px 0 50px; }
   .hero h1 { font-size:43px; }
   .resume-onboarding { align-items:stretch; flex-direction:column; }.resume-picker { max-width:none; text-align:center; }.profile-result small { margin-left:0; }

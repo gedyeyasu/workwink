@@ -1,0 +1,12 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "WorkWink Apply output",
+  "description": "Machine-readable application preparation or submission audit results.",
+  "properties": {
+    "results": {
+      "type": "string",
+      "title": "Application result",
+      "template": "{{links.apiDefaultDatasetUrl}}/items"
+    }
+  }
+}
