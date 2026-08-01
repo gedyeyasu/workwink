@@ -1,33 +1,171 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#fbf7f0" />
-    <title>Career Crush — Swipe into your next role</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand"><span class="brand-mark">♥</span><span>career crush</span></div>
-        <div class="profile-card"><div class="avatar">AM</div><div><strong>Alex Morgan</strong><span>Staff Platform Engineer</span></div><button class="icon-btn" aria-label="Edit profile" data-action="edit-profile">•••</button><div class="profile-progress"><span><i></i></span><small>Profile <b>86%</b> ready</small></div></div>
-        <nav><button class="nav-item active"><span>✦</span>Discover <em>4</em></button><button class="nav-item" data-action="show-matches"><span>♡</span>Matches <em id="match-count">0</em></button><button class="nav-item"><span>▣</span>Applications</button></nav>
-        <div class="sidebar-bottom"><div class="index-status"><span class="status-dot"></span><div><strong>Live index</strong><small>Updated 3 min ago</small></div></div><button class="help-link">? How it works</button></div>
-      </aside>
-      <main class="main-content">
-        <header class="topbar"><div class="mobile-brand brand"><span class="brand-mark">♥</span> career crush</div><div class="topbar-right"><span class="live-pill"><i></i> Fresh from the web</span><button class="bell" aria-label="Notifications">♧</button><div class="mini-avatar">AM</div></div></header>
-        <section class="hero-row"><div><p class="eyebrow">YOUR NEXT CHAPTER, CURATED</p><h1>Find a role that<br /><em>feels like you.</em></h1></div><div class="hero-note"><span class="spark">✦</span><p>Every swipe teaches us a little more about what makes a <strong>yes</strong> for you.</p></div></section>
-        <section class="filters" aria-label="Job filters"><button class="filter-chip selected" data-filter="all">All roles <span>⌄</span></button><button class="filter-chip" data-filter="workStyle">⌖ Remote <span>⌄</span></button><button class="filter-chip" data-filter="location">⌁ Austin + 50 mi <span>⌄</span></button><button class="filter-chip" data-filter="compensation">$140k+ <span>⌄</span></button><button class="filter-chip" data-filter="seniority">Senior+ <span>⌄</span></button><button class="filter-chip filter-more">＋ More filters</button></section>
-        <div class="feed-layout"><section class="deck-column"><div class="deck-heading"><div><span class="result-count"><b id="result-count">4</b> roles matched your profile</span><span class="sorted">Sorted by <strong>best fit</strong> ↓</span></div><button class="refresh" data-action="refresh">↻ Refresh</button></div><div class="deck" id="deck" aria-live="polite"></div><div class="deck-actions"><button class="round-action undo" data-action="undo" aria-label="Undo last swipe">↶</button><button class="round-action pass" data-action="pass" aria-label="Pass on this job">×</button><button class="round-action save" data-action="save" aria-label="Save this job">☆</button><button class="round-action like" data-action="like" aria-label="Like this job">♥</button><button class="round-action super" data-action="details" aria-label="See job details">✦</button></div><p class="keyboard-hint"><kbd>←</kbd> pass <kbd>→</kbd> like <kbd>↑</kbd> see why it matches</p></section>
-          <aside class="insight-column"><div class="insight-card profile-insight"><div class="card-kicker"><span>✦</span> YOUR MATCH SIGNALS <button>•••</button></div><div class="signal-main"><div class="signal-ring"><strong>82</strong><span>/ 100</span></div><div><h3>Your profile is getting sharper.</h3><p>Based on your resume and <b id="swipe-copy">0 swipes</b>, here’s what’s ranking up.</p></div></div><div class="signal-bars"><div><span>Platform & infrastructure</span><b>98%</b><i><em style="width:98%"></em></i></div><div><span>Remote-first culture</span><b>91%</b><i><em style="width:91%"></em></i></div><div><span>Leadership scope</span><b>74%</b><i><em style="width:74%"></em></i></div></div><button class="text-button" data-action="edit-profile">Tune my preferences <span>→</span></button></div><div class="insight-card recent-card"><div class="card-kicker"><span>♡</span> RECENTLY SAVED <button>•••</button></div><div class="saved-empty" id="saved-empty"><span>☆</span><p>Your yeses will land here.<br /><small>Swipe right to save a role.</small></p></div><div class="saved-list" id="saved-list"></div></div><div class="privacy-note"><span>⌁</span><p>Your profile is private. We never submit an application without your approval.</p></div></aside>
-        </div>
-      </main>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="WorkWink finds fresh, relevant jobs from live sources.">
+  <title>WorkWink — Find work worth winking at</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="WorkWink home">
+      <span class="brand-mark" aria-hidden="true">W</span>
+      <span>WorkWink</span>
+    </a>
+    <div class="source-status" id="sourceStatus" role="status">
+      <span class="status-dot"></span>
+      <span>Checking live index…</span>
     </div>
-    <div class="toast" id="toast" role="status"></div><div class="modal-backdrop" id="modal" aria-hidden="true"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal">×</button><div id="modal-content"></div></div></div>
-    <script type="module" src="/app.js"></script>
-  </body>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="eyebrow"><span>✦</span> Live roles. Less noise.</div>
+      <h1 id="hero-title">Your next move<br><em>might be a wink away.</em></h1>
+      <p>Search freshly indexed jobs, tune the signal, and swipe through roles that actually fit.</p>
+      <form class="search-shell" id="searchForm" role="search">
+        <span class="search-icon" aria-hidden="true"></span>
+        <label class="sr-only" for="query">Job title, skill, or company</label>
+        <input id="query" name="query" type="search" autocomplete="off" placeholder="Try “product designer” or “TypeScript”…">
+        <button type="submit">Find my match <span aria-hidden="true">→</span></button>
+      </form>
+      <div class="quick-searches" aria-label="Suggested searches">
+        <span>Popular:</span>
+        <button type="button" data-query="AI engineer">AI engineer</button>
+        <button type="button" data-query="Product designer">Product designer</button>
+        <button type="button" data-query="Growth lead">Growth lead</button>
+      </div>
+    </section>
+
+    <section class="workspace" id="workspace" aria-labelledby="resultsHeading">
+      <aside class="filters-panel" aria-label="Search filters">
+        <div class="filters-heading">
+          <h2>Fine-tune</h2>
+          <button id="clearFilters" class="text-button" type="button">Reset</button>
+        </div>
+
+        <fieldset>
+          <legend>Work mode</legend>
+          <div class="chip-grid" data-filter-group="workMode">
+            <button class="filter-chip" type="button" data-value="remote">Remote</button>
+            <button class="filter-chip" type="button" data-value="hybrid">Hybrid</button>
+            <button class="filter-chip" type="button" data-value="onsite">On-site</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Seniority</legend>
+          <div class="chip-grid" data-filter-group="seniority">
+            <button class="filter-chip" type="button" data-value="entry">Entry</button>
+            <button class="filter-chip" type="button" data-value="mid">Mid-level</button>
+            <button class="filter-chip" type="button" data-value="senior">Senior</button>
+            <button class="filter-chip" type="button" data-value="lead">Lead</button>
+          </div>
+        </fieldset>
+
+        <label class="field-label" for="titleFamily">Title family</label>
+        <select id="titleFamily" data-single-filter="titleFamily">
+          <option value="">Any discipline</option>
+          <option value="engineering">Engineering</option>
+          <option value="design">Design</option>
+          <option value="product">Product</option>
+          <option value="data">Data</option>
+          <option value="sales">Sales</option>
+          <option value="marketing">Marketing</option>
+          <option value="operations">Operations</option>
+        </select>
+
+        <label class="field-label" for="skills">Skills <span>comma-separated</span></label>
+        <input class="filter-input" id="skills" type="text" placeholder="React, Figma, Python">
+
+        <label class="field-label" for="company">Company</label>
+        <input class="filter-input" id="company" type="text" placeholder="Any company">
+
+        <label class="field-label" for="postedAge">Posted</label>
+        <select id="postedAge">
+          <option value="">Any time</option>
+          <option value="1">Past 24 hours</option>
+          <option value="3">Past 3 days</option>
+          <option value="7">Past week</option>
+          <option value="30">Past month</option>
+        </select>
+
+        <label class="field-label" for="salaryMin">Minimum salary <output id="salaryOutput">Any</output></label>
+        <input id="salaryMin" class="salary-range" type="range" min="0" max="250000" step="10000" value="0">
+        <div class="range-labels"><span>$0</span><span>$250k+</span></div>
+      </aside>
+
+      <section class="results-panel">
+        <div class="results-topline">
+          <div>
+            <span class="section-kicker">THE SHORTLIST</span>
+            <h2 id="resultsHeading">Fresh matches</h2>
+          </div>
+          <div class="results-tools">
+            <span id="resultCount" aria-live="polite"></span>
+            <label class="sr-only" for="sort">Sort jobs</label>
+            <select id="sort">
+              <option value="relevance">Best match</option>
+              <option value="newest">Newest</option>
+              <option value="salary">Highest salary</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="active-filters" id="activeFilters" aria-label="Active filters"></div>
+        <div class="notice hidden" id="degradedNotice" role="status"></div>
+
+        <div class="card-stage" id="cardStage" aria-live="polite">
+          <div class="welcome-state" id="welcomeState">
+            <span class="welcome-orbit" aria-hidden="true"><i></i></span>
+            <h3>Tell us what you’re looking for</h3>
+            <p>Your live shortlist will appear here. We don’t pad results with demo jobs.</p>
+          </div>
+        </div>
+
+        <div class="swipe-actions hidden" id="swipeActions" aria-label="Job card actions">
+          <button class="round-action pass" id="passJob" type="button" aria-label="Pass on this job">×</button>
+          <span>SWIPE OR TAP</span>
+          <button class="round-action save" id="saveJob" type="button" aria-label="Open this job">♥</button>
+        </div>
+        <button class="load-more hidden" id="loadMore" type="button">Load more matches</button>
+      </section>
+    </section>
+  </main>
+
+  <template id="jobCardTemplate">
+    <article class="job-card">
+      <div class="swipe-stamp stamp-pass">PASS</div>
+      <div class="swipe-stamp stamp-save">LOOKS GOOD</div>
+      <div class="card-head">
+        <div class="company-logo" aria-hidden="true"></div>
+        <div class="card-source"><span class="live-pip"></span><span data-field="freshness"></span></div>
+      </div>
+      <div class="job-body">
+        <p class="company-name" data-field="company"></p>
+        <h3 data-field="title"></h3>
+        <div class="job-meta">
+          <span data-field="location"></span>
+          <span data-field="salary"></span>
+        </div>
+        <p class="job-description" data-field="description"></p>
+        <div class="skill-list" data-field="skills"></div>
+      </div>
+      <footer class="card-footer">
+        <div class="provenance">
+          <span>Indexed from <a data-field="source" target="_blank" rel="noopener noreferrer"></a></span>
+          <small data-field="indexed"></small>
+        </div>
+        <a class="apply-link" data-field="apply" target="_blank" rel="noopener noreferrer">View role <span>↗</span></a>
+      </footer>
+    </article>
+  </template>
+</body>
 </html>

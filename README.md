@@ -1,53 +1,83 @@
-# Career Crush
+# WorkWink
 
-> A real-time job discovery agent that learns what you would actually accept.
+**Swipe into work worth wanting.**
 
-Career Crush turns noisy, fast-changing job listings into an evidence-backed swipe feed:
+WorkWink is a real-time job discovery application for the Elastic × Apify hackathon. Apify's official Web Scraper Actor collects public job postings from company ATS boards. WorkWink validates and normalizes that dataset, bulk-indexes it into Elasticsearch, and serves a swipe feed whose search, counts, filters, and provenance all come from the live index.
 
-> **"Is this a role I would actually say yes to?"**
+There is deliberately no runtime demo-data mode. Missing credentials or an unavailable integration produces an explicit error state.
 
-It fetches fresh listings from Apify Actors, records them in Elasticsearch as attributable job documents, and ranks them against a user's resume, preferences, and swipe behavior. Every match score is explainable.
-
-## Why this fits the Elastic × Apify challenge
-
-- **Apify** provides live, on-demand job data—the feed is not a stale job-board snapshot.
-- **Elasticsearch** performs hybrid retrieval and stores jobs, profiles, and swipe history so ranking adapts after every decision.
-- **The outcome is actionable:** each card shows a match score, supporting evidence, risks, and a tailored application draft.
-
-## Hack-night demo
-
-1. Create an account and upload a resume.
-2. Set preferences: "platform engineering, remote or Austin, $140k minimum."
-3. Swipe through fresh jobs.
-4. Open a high-match role to see the evidence-backed score.
-5. Generate a tailored application package for user approval.
-
-## Initial architecture
+## The winning path
 
 ```text
-Apify Actors → normalize + deduplicate → Elasticsearch job memory → hybrid retrieval → adaptive swipe feed → application draft
+Apify official Web Scraper Actor
+  -> JSON-LD JobPosting dataset
+  -> schema validation + normalization + deduplication
+  -> Elasticsearch versioned job index
+  -> lexical/hybrid retrieval + disjunctive aggregations
+  -> instant facet filters + swipe feed
 ```
 
-The first slice keeps source adapters small and testable. It normalizes raw records into provenance-preserving job documents, prepares an Elasticsearch mapping suited to hybrid retrieval, and includes a demo web app with realistic job data.
+## Requirements
 
-## Local development
+- Node.js 22+
+- pnpm 9+
+- An Apify token with access to Apify-maintained Actors
+- An Elasticsearch endpoint and API key
+- For hybrid retrieval, an explicit Elastic inference endpoint id
 
-Requires Node.js 20+.
+Copy `.env.example` to `.env`. At minimum:
+
+```dotenv
+APIFY_TOKEN=...
+APIFY_ACTOR_ID=apify/web-scraper
+ELASTICSEARCH_URL=https://...
+ELASTIC_TOKEN=...
+ADMIN_TOKEN=at-least-24-characters
+CURSOR_SECRET=at-least-32-characters
+```
+
+`ELASTIC_TOKEN` is accepted as an alias for `ELASTICSEARCH_API_KEY`.
+
+## Run the real integration
 
 ```bash
-npm test
-
-npm run dev
+pnpm install
+pnpm setup:elastic
+pnpm apify:run
+pnpm ingest:run -- <APIFY_RUN_ID>
+pnpm dev
 ```
 
-No credentials are needed for the initial tests. Add `APIFY_TOKEN` and `ELASTICSEARCH_URL` to `.env` only when connecting the live ingestion path.
+Then open `http://localhost:4173`.
 
-The live seams are in `src/apify.js` and `src/elastic.js`: run an Apify Actor, fetch its dataset, normalize the records, and index them into Elasticsearch. The web app stays in demo mode until those credentials are intentionally wired into the server.
+The Apify command prints the run and dataset ids, never the token. The ingest command fetches the finished dataset through the official client, rejects malformed records, and reports Elasticsearch bulk failures instead of masking them.
 
-## Next build steps
+## Six-hour collection
 
-- Connect selected Apify Actors and ingest their datasets.
-- Create the Elasticsearch index and enable semantic/hybrid retrieval.
-- Connect the profile and swipe events to a hosted store.
-- Add a browser handoff for assisted application submission.
-- Deploy a shareable demo before submission.
+Set `APIFY_WEBHOOK_URL` to the deployed WorkWink endpoint (for example, `https://your-app.example/api/webhooks/apify`), set a 24+ character `APIFY_WEBHOOK_SECRET`, and run:
+
+```bash
+pnpm apify:schedule
+```
+
+The schedule uses `0 */6 * * *` in UTC and only the official `apify/web-scraper` Actor. Provisioning also registers an `ACTOR.RUN.SUCCEEDED` webhook when its URL and secret are set. The callback authenticates the request, and the importer independently verifies the referenced run through Apify before ingestion.
+
+## Verification
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm smoke:live
+```
+
+`smoke:live` is credentialed and traces a real Apify result into an Elasticsearch query and facet bucket. Unit tests may use local values; runtime code never imports them.
+
+## Index design
+
+The read and write aliases point at a versioned backing index. Exact filters use keyword/numeric/date fields, descriptions use analyzed text, and optional semantic retrieval uses an explicit `semantic_text` inference id. Mapping changes create a new version and swap aliases only after verification.
+
+Facet behavior is disjunctive: values inside one facet are ORed; different facets are ANDed; the facet currently being counted excludes only its own selection. This keeps counts useful while users filter.
+
+See [`docs/engineering-plan.md`](docs/engineering-plan.md) for the reviewed architecture and failure model.
+
+See [`docs/live-integration-proof.md`](docs/live-integration-proof.md) for the credentialed Apify-to-Elastic verification record.

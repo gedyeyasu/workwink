@@ -1,50 +1,428 @@
-const state = { jobs: [], index: 0, swipes: [], filters: { workStyle: "Any", minCompensation: "140000" } };
-const deck = document.querySelector("#deck");
-const toast = document.querySelector("#toast");
-const modal = document.querySelector("#modal");
+(() => {
+  "use strict";
 
-await loadJobs();
-document.addEventListener("click", handleClick);
-document.addEventListener("keydown", (event) => { if (event.key === "ArrowLeft") swipe("left"); if (event.key === "ArrowRight") swipe("right"); if (event.key === "ArrowUp") showDetails(currentJob()); if (event.key === "Escape") closeModal(); });
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const els = {
+    form: $("#searchForm"),
+    query: $("#query"),
+    workspace: $("#workspace"),
+    stage: $("#cardStage"),
+    resultCount: $("#resultCount"),
+    activeFilters: $("#activeFilters"),
+    degraded: $("#degradedNotice"),
+    sourceStatus: $("#sourceStatus"),
+    clearFilters: $("#clearFilters"),
+    skills: $("#skills"),
+    company: $("#company"),
+    titleFamily: $("#titleFamily"),
+    postedAge: $("#postedAge"),
+    salaryMin: $("#salaryMin"),
+    salaryOutput: $("#salaryOutput"),
+    sort: $("#sort"),
+    swipeActions: $("#swipeActions"),
+    passJob: $("#passJob"),
+    saveJob: $("#saveJob"),
+    loadMore: $("#loadMore"),
+    template: $("#jobCardTemplate")
+  };
 
-async function loadJobs() {
-  const params = new URLSearchParams(state.filters);
-  const response = await fetch(`/api/jobs?${params}`); const data = await response.json();
-  state.jobs = data.jobs; state.swipes = data.swipes; state.index = 0; render();
-}
-function render() {
-  const remaining = state.jobs.slice(state.index);
-  document.querySelector("#result-count").textContent = remaining.length;
-  document.querySelector("#match-count").textContent = state.swipes.filter((swipe) => swipe.direction === "right").length;
-  document.querySelector("#swipe-copy").textContent = `${state.swipes.length} swipe${state.swipes.length === 1 ? "" : "s"}`;
-  deck.innerHTML = remaining.slice(0, 2).map((job, position) => cardMarkup(job, position)).join(""); renderSaved();
-}
-function cardMarkup(job, position) {
-  return `<article class="job-card ${position ? "is-behind" : ""}" data-job-id="${job.id}"><div class="job-top"><div class="company-logo">${job.logo}</div><div class="job-meta"><h2>${job.title}</h2><p>${job.company} · ${job.location}</p></div><div class="match-badge"><strong>${job.match.score}</strong><span>MATCH</span></div></div><div class="job-facts"><span class="fact">${job.workStyle}</span><span class="fact">${job.compensation}</span><span class="fact">Posted ${job.posted}</span></div><p class="job-description">${job.description}</p><div class="job-tags">${job.tags.map((tag) => `<span class="job-tag">${tag}</span>`).join("")}</div><div class="job-footer"><span class="source"><i>●</i> ${job.source} · collected ${job.collectedAt}</span><button class="why-button" data-action="details" data-job-id="${job.id}">Why this match <span>↗</span></button></div></article>`;
-}
-async function handleClick(event) {
-  const target = event.target.closest("[data-action], [data-filter]"); if (!target) return;
-  const action = target.dataset.action;
-  if (target.dataset.filter) return applyFilter(target.dataset.filter, target);
-  if (action === "pass") return swipe("left"); if (action === "like" || action === "save") return swipe("right"); if (action === "undo") return undo(); if (action === "refresh") return loadJobs();
-  if (action === "details") return showDetails(findJob(target.dataset.jobId) ?? currentJob()); if (action === "edit-profile") return showProfile(); if (action === "close-modal") return closeModal(); if (action === "show-matches") return showSavedMessage(); if (action === "apply-draft") return createDraft(target.dataset.jobId); if (action === "save-profile") return saveProfile();
-}
-async function swipe(direction) {
-  const job = currentJob(); if (!job) return showToast("You’re all caught up. Refresh for more roles.");
-  const card = deck.querySelector(".job-card:not(.is-behind)"); card?.classList.add(direction === "right" ? "swiped-right" : "swiped-left"); state.swipes.push({ jobId: job.id, direction }); state.index += 1;
-  await fetch("/api/swipes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId: job.id, direction }) }); setTimeout(() => render(), 200); showToast(direction === "right" ? `${job.company} saved to your matches ♥` : "Passed — your feed is learning.");
-}
-function undo() { if (!state.index || !state.swipes.length) return showToast("Nothing to undo yet."); state.index -= 1; state.swipes.pop(); render(); showToast("Last swipe undone"); }
-function applyFilter(type, chip) { if (type === "workStyle") state.filters.workStyle = state.filters.workStyle === "Remote" ? "Any" : "Remote"; if (type === "compensation") state.filters.minCompensation = state.filters.minCompensation === "140000" ? "0" : "140000"; document.querySelectorAll(".filter-chip").forEach((item) => item.classList.remove("selected")); chip.classList.add("selected"); loadJobs(); }
-function showDetails(job) {
-  if (!job) return;
-  modal.querySelector("#modal-content").innerHTML = `<p class="eyebrow">MATCH EXPLAINED · ${job.company.toUpperCase()}</p><h2>${job.match.score}% <em>match</em></h2><p>Career Crush combines semantic skill fit, your hard constraints, learned preferences, listing freshness, and growth potential.</p><div class="evidence-list">${job.match.reasons.map((reason) => `<div class="evidence">${reason}</div>`).join("")}${job.match.risks.map((risk) => `<div class="risk">${risk}</div>`).join("")}</div><button class="modal-cta" data-action="apply-draft" data-job-id="${job.id}">Prepare my application →</button>`; openModal();
-}
-function showProfile() { modal.querySelector("#modal-content").innerHTML = `<p class="eyebrow">YOUR PROFILE</p><h2>Make your next yes <em>count.</em></h2><p>Career Crush uses this to personalize your feed. Your profile stays private until you approve an application.</p><div class="form-grid"><label>RESUME<input class="resume-drop" type="file" accept=".pdf,.doc,.docx" /></label><label>TARGET ROLE<input value="Staff Platform Engineer" /></label><label>HOME BASE<input value="Austin, TX" /></label><label>MINIMUM COMPENSATION<input value="$140,000" /></label><label>WORK STYLE<select><option>Remote</option><option>Hybrid</option><option>On-site</option></select></label><button class="modal-cta" data-action="save-profile">Save profile →</button></div>`; openModal(); }
-async function createDraft(jobId) { const job = findJob(jobId); if (!job) return; const button = modal.querySelector("[data-action=apply-draft]"); if (button) { button.textContent = "Drafting your application…"; button.disabled = true; } const response = await fetch("/api/application-draft", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jobId, company: job.company, title: job.title }) }); const draft = await response.json(); modal.querySelector("#modal-content").innerHTML = `<p class="eyebrow">APPLICATION COCKPIT · READY FOR REVIEW</p><h2>Make it <em>personal.</em></h2><p>Here’s a first draft built from your profile and the evidence in this role. Nothing is submitted automatically.</p><strong>Tailored resume bullets</strong><div class="draft-block">• ${draft.resumeBullets.join("\n• ")}</div><strong>Cover letter</strong><div class="draft-block">${draft.coverLetter}</div><button class="modal-cta" data-action="close-modal">Save draft for later →</button>`; }
-function saveProfile() { closeModal(); showToast("Profile updated — your feed will keep learning."); }
-function showSavedMessage() { showToast("Your matches will appear here as you swipe right."); }
-function findJob(jobId) { return state.jobs.find((job) => job.id === jobId); } function currentJob() { return state.jobs[state.index]; }
-function openModal() { modal.classList.add("open"); modal.setAttribute("aria-hidden", "false"); } function closeModal() { modal.classList.remove("open"); modal.setAttribute("aria-hidden", "true"); }
-function showToast(message) { toast.textContent = message; toast.classList.add("show"); setTimeout(() => toast.classList.remove("show"), 2300); }
-function renderSaved() { const saved = state.swipes.filter((swipe) => swipe.direction === "right").map((swipe) => findJob(swipe.jobId)).filter(Boolean); const empty = document.querySelector("#saved-empty"); const list = document.querySelector("#saved-list"); empty.style.display = saved.length ? "none" : "flex"; list.innerHTML = saved.map((job) => `<div class="saved-job"><div class="saved-logo">${job.logo}</div><div><b>${job.title}</b><span>${job.company} · ${job.match.score}% match</span></div></div>`).join(""); }
+  const state = {
+    jobs: [],
+    total: 0,
+    nextCursor: null,
+    controller: null,
+    debounceTimer: null,
+    requestSerial: 0,
+    hasSearched: false,
+    loadingMore: false
+  };
+
+  function splitValues(value) {
+    return [...new Set(value.split(",").map((item) => item.trim()).filter(Boolean))].slice(0, 30);
+  }
+
+  function selectedChips(group) {
+    return $$(`[data-filter-group="${group}"] .filter-chip.active`).map((chip) => chip.dataset.value);
+  }
+
+  function getRequest(cursor = null) {
+    const minimumSalary = Number(els.salaryMin.value) || null;
+    const postedWithinDays = Number(els.postedAge.value) || null;
+    return {
+      query: els.query.value.trim(),
+      filters: {
+        workModes: selectedChips("workMode"),
+        seniority: selectedChips("seniority"),
+        titleFamilies: els.titleFamily.value ? [els.titleFamily.value] : [],
+        skills: splitValues(els.skills.value),
+        companies: splitValues(els.company.value),
+        employmentTypes: [],
+        industries: [],
+        minimumSalary,
+        includeUnknownSalary: minimumSalary === null,
+        postedWithinDays
+      },
+      sort: els.sort.value,
+      pageSize: 20,
+      cursor
+    };
+  }
+
+  function syncUrl() {
+    const request = getRequest();
+    const params = new URLSearchParams();
+    if (request.query) params.set("q", request.query);
+    const mappings = [
+      ["mode", request.filters.workModes],
+      ["level", request.filters.seniority],
+      ["family", request.filters.titleFamilies],
+      ["skills", request.filters.skills],
+      ["company", request.filters.companies]
+    ];
+    mappings.forEach(([key, values]) => values.length && params.set(key, values.join(",")));
+    if (request.filters.postedWithinDays) params.set("age", String(request.filters.postedWithinDays));
+    if (request.filters.minimumSalary) params.set("salary", String(request.filters.minimumSalary));
+    if (request.sort !== "relevance") params.set("sort", request.sort);
+    const query = params.toString();
+    history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}`);
+  }
+
+  function restoreUrlState() {
+    const params = new URLSearchParams(location.search);
+    els.query.value = params.get("q") ?? "";
+    const activate = (group, values) => {
+      const selected = new Set((values ?? "").split(",").filter(Boolean));
+      $$(`[data-filter-group="${group}"] .filter-chip`).forEach((chip) => chip.classList.toggle("active", selected.has(chip.dataset.value)));
+    };
+    activate("workMode", params.get("mode"));
+    activate("seniority", params.get("level"));
+    els.titleFamily.value = (params.get("family") ?? "").split(",")[0] ?? "";
+    els.skills.value = params.get("skills") ?? "";
+    els.company.value = params.get("company") ?? "";
+    els.postedAge.value = params.get("age") ?? "30";
+    els.salaryMin.value = params.get("salary") ?? "0";
+    els.sort.value = params.get("sort") ?? "relevance";
+    updateSalaryLabel();
+  }
+
+  function updateSalaryLabel() {
+    const amount = Number(els.salaryMin.value);
+    els.salaryOutput.value = amount ? `$${Math.round(amount / 1000)}k+` : "Any";
+  }
+
+  function activeFilterEntries() {
+    const request = getRequest();
+    return [
+      ...request.filters.workModes.map((value) => ({ group: "workMode", value, label: value })),
+      ...request.filters.seniority.map((value) => ({ group: "seniority", value, label: value })),
+      ...request.filters.titleFamilies.map((value) => ({ group: "titleFamily", value, label: value })),
+      ...request.filters.skills.map((value) => ({ group: "skills", value, label: value })),
+      ...request.filters.companies.map((value) => ({ group: "company", value, label: value })),
+      ...(request.filters.postedWithinDays ? [{ group: "age", value: String(request.filters.postedWithinDays), label: `${request.filters.postedWithinDays}d` }] : []),
+      ...(request.filters.minimumSalary ? [{ group: "salary", value: String(request.filters.minimumSalary), label: `$${Math.round(request.filters.minimumSalary / 1000)}k+` }] : [])
+    ];
+  }
+
+  function renderActiveFilters() {
+    els.activeFilters.replaceChildren(...activeFilterEntries().map((entry) => {
+      const chip = document.createElement("span");
+      chip.className = "active-filter";
+      chip.append(document.createTextNode(entry.label));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.setAttribute("aria-label", `Remove ${entry.label} filter`);
+      remove.textContent = "×";
+      remove.addEventListener("click", () => removeFilter(entry));
+      chip.append(remove);
+      return chip;
+    }));
+  }
+
+  function removeFilter(entry) {
+    if (entry.group === "workMode" || entry.group === "seniority") {
+      const chip = $(`[data-filter-group="${entry.group}"] [data-value="${CSS.escape(entry.value)}"]`);
+      chip?.classList.remove("active");
+    } else if (entry.group === "titleFamily") els.titleFamily.value = "";
+    else if (entry.group === "skills") els.skills.value = splitValues(els.skills.value).filter((value) => value !== entry.value).join(", ");
+    else if (entry.group === "company") els.company.value = splitValues(els.company.value).filter((value) => value !== entry.value).join(", ");
+    else if (entry.group === "age") els.postedAge.value = "";
+    else if (entry.group === "salary") { els.salaryMin.value = "0"; updateSalaryLabel(); }
+    scheduleSearch();
+  }
+
+  function showLoading(loadMore) {
+    if (loadMore) {
+      els.loadMore.disabled = true;
+      els.loadMore.textContent = "Loading…";
+      return;
+    }
+    els.swipeActions.classList.add("hidden");
+    els.loadMore.classList.add("hidden");
+    els.stage.innerHTML = `<div class="state-panel"><span class="loader" aria-hidden="true"></span><h3>Reading the live index</h3><p>Ranking fresh roles against your search and filters…</p></div>`;
+  }
+
+  function showError(error) {
+    const message = error?.message || "Live search could not be reached.";
+    els.stage.innerHTML = "";
+    const panel = document.createElement("div");
+    panel.className = "state-panel error";
+    const title = document.createElement("h3");
+    title.textContent = "The signal dropped";
+    const detail = document.createElement("p");
+    detail.textContent = message;
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.textContent = "Try again";
+    retry.addEventListener("click", () => performSearch());
+    panel.append(title, detail, retry);
+    els.stage.append(panel);
+    els.resultCount.textContent = "Unavailable";
+    els.swipeActions.classList.add("hidden");
+    els.loadMore.classList.add("hidden");
+  }
+
+  function showEmpty() {
+    els.stage.innerHTML = `<div class="state-panel"><span class="welcome-orbit" aria-hidden="true"><i></i></span><h3>No live matches yet</h3><p>Try a broader title, remove a filter, or expand the posted date. Nothing synthetic has been added.</p></div>`;
+    els.swipeActions.classList.add("hidden");
+    els.loadMore.classList.add("hidden");
+  }
+
+  function formatRelativeDate(value) {
+    if (!value) return "Freshness unknown";
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) return "Recently indexed";
+    const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
+    if (minutes < 2) return "Just indexed";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  function formatSalary(salary) {
+    if (!salary) return "Salary not listed";
+    if (salary.sourceText) return salary.sourceText;
+    const min = salary.annualMin ?? salary.min;
+    const max = salary.annualMax ?? salary.max;
+    const currency = salary.currency === "USD" ? "$" : salary.currency ? `${salary.currency} ` : "";
+    const compact = (value) => value >= 1000 ? `${Math.round(value / 1000)}k` : String(value);
+    if (min != null && max != null) return `${currency}${compact(min)}–${compact(max)}`;
+    if (min != null) return `${currency}${compact(min)}+`;
+    if (max != null) return `Up to ${currency}${compact(max)}`;
+    return "Salary not listed";
+  }
+
+  function hostname(value, fallback) {
+    try { return new URL(value).hostname.replace(/^www\./, ""); } catch { return fallback; }
+  }
+
+  function createCard(job) {
+    const card = els.template.content.firstElementChild.cloneNode(true);
+    const set = (field, value) => { $(`[data-field="${field}"]`, card).textContent = value; };
+    const company = job.companyName || "Company undisclosed";
+    set("company", company);
+    set("title", job.title || "Untitled role");
+    set("location", [job.location, job.workMode && job.workMode !== "unknown" ? job.workMode : ""].filter(Boolean).join(" · ") || "Location not listed");
+    set("salary", formatSalary(job.salary));
+    set("description", job.description || job.requirements || "Open the source listing for full role details.");
+    const freshnessDate = job.postedAt || job.collectedAt || job.verifiedAt;
+    set("freshness", formatRelativeDate(freshnessDate));
+    set("indexed", job.collectedAt ? `Collected ${new Date(job.collectedAt).toLocaleString()}` : "Collection time unavailable");
+    const sourceLink = $("[data-field=source]", card);
+    sourceLink.href = job.sourceUrl;
+    sourceLink.textContent = job.source || hostname(job.sourceUrl, "source");
+    const applyLink = $("[data-field=apply]", card);
+    applyLink.href = job.applyUrl || job.sourceUrl;
+    const logo = $(".company-logo", card);
+    logo.textContent = company.slice(0, 1).toUpperCase();
+    const palette = ["#d9ff43", "#9e83ff", "#ff8d78", "#6ee7ce", "#f0c66b"];
+    logo.style.background = palette[Math.abs([...company].reduce((sum, char) => sum + char.charCodeAt(0), 0)) % palette.length];
+    const skillList = $("[data-field=skills]", card);
+    (job.skills || []).slice(0, 7).forEach((skill) => {
+      const badge = document.createElement("span");
+      badge.textContent = skill;
+      skillList.append(badge);
+    });
+    card.dataset.applyUrl = applyLink.href;
+    attachSwipe(card);
+    return card;
+  }
+
+  function renderDeck() {
+    els.stage.innerHTML = "";
+    if (!state.jobs.length) {
+      showEmpty();
+      return;
+    }
+    state.jobs.slice(0, 3).reverse().forEach((job) => els.stage.append(createCard(job)));
+    els.swipeActions.classList.remove("hidden");
+    els.loadMore.classList.toggle("hidden", !state.nextCursor || state.jobs.length > 5);
+    els.loadMore.disabled = false;
+    els.loadMore.textContent = "Load more matches";
+  }
+
+  function renderResponse(response, append) {
+    state.jobs = append ? [...state.jobs, ...(response.items || [])] : (response.items || []);
+    state.total = Number(response.total) || state.jobs.length;
+    state.nextCursor = response.nextCursor || null;
+    els.resultCount.textContent = `${state.total.toLocaleString()} ${state.total === 1 ? "role" : "roles"}`;
+    els.degraded.classList.toggle("hidden", !response.degraded);
+    els.degraded.textContent = response.degraded
+      ? `Hybrid ranking is degraded; showing live ${response.mode || "lexical"} results. (${response.tookMs ?? "—"} ms)`
+      : "";
+    if (response.dataFreshness) {
+      els.sourceStatus.className = "source-status ready";
+      els.sourceStatus.lastElementChild.textContent = `Live index · ${formatRelativeDate(response.dataFreshness)}`;
+    }
+    applyFacetCounts(response.facets || {});
+    renderDeck();
+  }
+
+  function applyFacetCounts(facets) {
+    const groups = { workMode: facets.workModes, seniority: facets.seniority };
+    Object.entries(groups).forEach(([group, buckets]) => {
+      const counts = new Map((buckets || []).map((bucket) => [bucket.value, bucket.count]));
+      $$(`[data-filter-group="${group}"] .filter-chip`).forEach((chip) => {
+        if (!chip.dataset.label) chip.dataset.label = chip.textContent;
+        const count = counts.get(chip.dataset.value);
+        chip.textContent = `${chip.dataset.label}${Number.isFinite(count) ? ` ${count}` : ""}`;
+      });
+    });
+  }
+
+  async function performSearch({ append = false } = {}) {
+    const cursor = append ? state.nextCursor : null;
+    if (append && !cursor) return;
+    state.controller?.abort();
+    const controller = new AbortController();
+    state.controller = controller;
+    const serial = ++state.requestSerial;
+    state.hasSearched = true;
+    state.loadingMore = append;
+    syncUrl();
+    renderActiveFilters();
+    showLoading(append);
+    try {
+      const response = await fetch("/api/search/jobs", {
+        method: "POST",
+        headers: { "content-type": "application/json", "accept": "application/json" },
+        body: JSON.stringify(getRequest(cursor)),
+        signal: controller.signal
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error?.message || `Search failed (${response.status})`);
+      if (serial !== state.requestSerial) return;
+      renderResponse(payload, append);
+    } catch (error) {
+      if (error.name === "AbortError" || serial !== state.requestSerial) return;
+      showError(error);
+    } finally {
+      if (serial === state.requestSerial) state.loadingMore = false;
+    }
+  }
+
+  function scheduleSearch() {
+    clearTimeout(state.debounceTimer);
+    updateSalaryLabel();
+    renderActiveFilters();
+    state.debounceTimer = setTimeout(() => performSearch(), 150);
+  }
+
+  function dismiss(direction, openRole = false) {
+    const topCard = $(".job-card:last-child", els.stage);
+    if (!topCard || !state.jobs.length) return;
+    if (openRole) window.open(topCard.dataset.applyUrl, "_blank", "noopener,noreferrer");
+    topCard.classList.add(direction === "right" ? "exit-right" : "exit-left");
+    setTimeout(() => {
+      state.jobs.shift();
+      if (state.jobs.length < 4 && state.nextCursor && !state.loadingMore) void performSearch({ append: true });
+      else renderDeck();
+    }, 260);
+  }
+
+  function attachSwipe(card) {
+    let startX = 0;
+    let currentX = 0;
+    let dragging = false;
+    card.addEventListener("pointerdown", (event) => {
+      if (event.target.closest("a")) return;
+      startX = event.clientX;
+      currentX = 0;
+      dragging = true;
+      card.classList.add("dragging");
+      card.setPointerCapture(event.pointerId);
+    });
+    card.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      currentX = event.clientX - startX;
+      card.style.transform = `translateX(${currentX}px) rotate(${currentX / 30}deg)`;
+      $(".stamp-save", card).style.opacity = String(Math.max(0, Math.min(1, currentX / 100)));
+      $(".stamp-pass", card).style.opacity = String(Math.max(0, Math.min(1, -currentX / 100)));
+    });
+    const release = () => {
+      if (!dragging) return;
+      dragging = false;
+      card.classList.remove("dragging");
+      if (Math.abs(currentX) > 100) dismiss(currentX > 0 ? "right" : "left");
+      else {
+        card.style.transform = "";
+        $(".stamp-save", card).style.opacity = "";
+        $(".stamp-pass", card).style.opacity = "";
+      }
+    };
+    card.addEventListener("pointerup", release);
+    card.addEventListener("pointercancel", release);
+  }
+
+  async function checkHealth() {
+    try {
+      const response = await fetch("/api/health", { headers: { accept: "application/json" } });
+      const body = await response.json();
+      const ready = body?.dependencies?.search === "ready";
+      els.sourceStatus.className = `source-status ${ready ? "ready" : "failed"}`;
+      els.sourceStatus.lastElementChild.textContent = ready ? "Live search connected" : "Live search degraded";
+    } catch {
+      els.sourceStatus.className = "source-status failed";
+      els.sourceStatus.lastElementChild.textContent = "API unreachable";
+    }
+  }
+
+  els.form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    clearTimeout(state.debounceTimer);
+    void performSearch();
+    els.workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $$("[data-query]").forEach((button) => button.addEventListener("click", () => {
+    els.query.value = button.dataset.query;
+    void performSearch();
+    els.workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+  $$(".filter-chip").forEach((button) => button.addEventListener("click", () => {
+    button.classList.toggle("active");
+    scheduleSearch();
+  }));
+  [els.titleFamily, els.postedAge, els.sort].forEach((element) => element.addEventListener("change", scheduleSearch));
+  [els.skills, els.company].forEach((element) => element.addEventListener("input", scheduleSearch));
+  els.salaryMin.addEventListener("input", scheduleSearch);
+  els.clearFilters.addEventListener("click", () => {
+    $$(".filter-chip.active").forEach((chip) => chip.classList.remove("active"));
+    els.titleFamily.value = "";
+    els.skills.value = "";
+    els.company.value = "";
+    els.postedAge.value = "";
+    els.salaryMin.value = "0";
+    els.sort.value = "relevance";
+    scheduleSearch();
+  });
+  els.passJob.addEventListener("click", () => dismiss("left"));
+  els.saveJob.addEventListener("click", () => dismiss("right", true));
+  els.loadMore.addEventListener("click", () => void performSearch({ append: true }));
+
+  restoreUrlState();
+  renderActiveFilters();
+  void checkHealth();
+  void performSearch();
+})();

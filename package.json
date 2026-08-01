@@ -1,14 +1,41 @@
 {
-  "name": "career-crush",
-  "version": "0.1.0",
+  "name": "workwink",
+  "version": "0.2.0",
   "private": true,
+  "description": "Real-time job discovery powered by Apify and Elasticsearch",
   "type": "module",
   "scripts": {
-    "test": "node --test",
-    "dev": "node src/server.js",
-    "start": "node src/server.js"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "setup:elastic": "tsx scripts/setup-elastic.ts",
+    "apify:run": "tsx scripts/run-apify.ts",
+    "apify:schedule": "tsx scripts/provision-apify-schedule.ts",
+    "ingest:run": "tsx scripts/ingest-apify-run.ts",
+    "smoke:live": "tsx scripts/smoke-live.ts"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "latest",
+    "@fastify/cors": "latest",
+    "@fastify/rate-limit": "latest",
+    "@fastify/static": "latest",
+    "apify-client": "latest",
+    "dotenv": "latest",
+    "fastify": "latest",
+    "sanitize-html": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/sanitize-html": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
   }
 }
