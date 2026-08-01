@@ -23,6 +23,8 @@ Apify official Web Scraper Actor
 - Saved official Actor Task: [WorkWink Sponsor Job Scraper](https://console.apify.com/actors/tasks/TvuuqUw3sThzhzUqr)
 - Sponsor run: `oQOKuuV18iF7mq0HV`; dataset: `ms1hr1R6oVhex0nj9`
 - Sponsor import: 261 accepted and indexed, zero rejected, zero bulk failures
+- California compensation run: `09XJwPqne2cc1k6ZF`; dataset: `DVn3F5MwrHS2QQrSo`; 803/803 jobs indexed with zero failures
+- Live salary filter proof: 143 software-engineering jobs with disclosed annual compensation (Anthropic 82, Scale AI 33, Reddit 27, OpenAI 1)
 - Elastic indices: `workwink-jobs-v1`, `workwink-ingestion-runs`, `workwink-ai-job-profiles-v1`, and `workwink-applications-v1`
 - Native Elastic NVIDIA inference endpoint: `workwink-nemotron`
 

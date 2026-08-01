@@ -29,6 +29,7 @@
     "@fastify/static": "latest",
     "apify-client": "latest",
     "dotenv": "latest",
+    "entities": "8.0.0",
     "fastify": "latest",
     "pdfjs-dist": "latest",
     "sanitize-html": "latest",

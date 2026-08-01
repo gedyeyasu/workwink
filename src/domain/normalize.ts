@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { decodeHTML } from "entities";
 import sanitizeHtml from "sanitize-html";
 import { canonicalJobSchema, type CanonicalJob } from "../contracts/job.js";
 
@@ -34,7 +35,11 @@ export function normalizeApifyJob(rawValue: unknown, sourceRunId: string, now = 
   const employmentType = uniqueStrings(posting.employmentType ?? envelope.employmentType);
   const industries = uniqueStrings(posting.industry ?? envelope.industry);
   const workMode = inferWorkMode(posting, description, location);
-  const salary = normalizeSalary(posting.baseSalary ?? envelope.baseSalary ?? envelope.salary);
+  const locationCountry = extractCountry(posting);
+  const structuredSalary = normalizeSalary(posting.baseSalary ?? envelope.baseSalary ?? envelope.salary);
+  const salary = structuredSalary.annualMin !== null || structuredSalary.annualMax !== null
+    ? structuredSalary
+    : extractDisclosedSalary(description, { location, locationCountry });
   const postedAt = isoDate(posting.datePosted ?? envelope.datePosted ?? envelope.postedAt);
   const validThrough = isoDate(posting.validThrough ?? envelope.validThrough);
   const collectedAt = isoDate(envelope.scrapedAt ?? envelope.collectedAt) ?? now.toISOString();
@@ -44,7 +49,6 @@ export function normalizeApifyJob(rawValue: unknown, sourceRunId: string, now = 
   const titleFamily = inferTitleFamily(title);
   const status = inferStatus(envelope, posting, validThrough, now);
   const companyWebsite = firstUrl(organization.sameAs, organization.url, envelope.companyWebsite);
-  const locationCountry = extractCountry(posting);
 
   const identitySeed = sourceJobId ? `${hostname(sourceUrl)}:${sourceJobId}` : `${companyName}|${title}|${location}|${applyUrl}`.toLowerCase();
   const jobId = createHash("sha256").update(identitySeed).digest("hex").slice(0, 32);
@@ -57,6 +61,83 @@ export function normalizeApifyJob(rawValue: unknown, sourceRunId: string, now = 
     requirements, salary, postedAt, validThrough, collectedAt, verifiedAt: now.toISOString(), status, contentHash,
     schemaVersion: 1, searchText
   });
+}
+
+type SalaryContext = { location: string; locationCountry: string | null };
+
+/**
+ * Extracts only an employer-disclosed USD range from the job description.
+ * This is deliberately conservative: single numbers, equity grants, bonuses,
+ * ranges without a pay period, and non-US dollar ranges remain unknown.
+ */
+export function extractDisclosedSalary(
+  description: string,
+  context: SalaryContext
+): CanonicalJob["salary"] {
+  const unknown = normalizeSalary(undefined);
+  const isUsListing = context.locationCountry?.toUpperCase() === "US"
+    || /\b(?:california|united states|u\.s\.|usa)\b|,\s*CA\b/i.test(context.location);
+  const rangePattern = /(?:\b(?:USD|US)\s*)?\$\s*(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?\s*[kK])\s*(?:-|–|—|\bto\b)\s*(?:\b(?:USD|US)\s*)?\$?\s*(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?\s*[kK])(?:\s*\bUSD\b)?/gi;
+  const candidates: Array<CanonicalJob["salary"] & { score: number; offset: number }> = [];
+
+  for (const match of description.matchAll(rangePattern)) {
+    const min = disclosedAmount(match[1]);
+    const max = disclosedAmount(match[2]);
+    if (min === null || max === null || max < min || max > 10_000_000) continue;
+
+    const offset = match.index ?? 0;
+    const leadingContext = description.slice(Math.max(0, offset - 140), offset);
+    const nearby = description.slice(Math.max(0, offset - 180), Math.min(description.length, offset + match[0].length + 120));
+    const period = disclosedPeriod(nearby, min, max);
+    if (!period) continue;
+
+    const explicitlyUsd = /\bUSD\b|\bUS\s*\$/i.test(match[0]) || /\bUSD\b|\bUS base (?:salary|pay)\b/i.test(nearby);
+    if (!explicitlyUsd && !isUsListing) continue;
+    if (period === "year" && min < 10_000) continue;
+    if (period === "hour" && max > 1_000) continue;
+
+    const multiplier = period === "hour" ? 2_080 : 1;
+    const locationScore = /\b(?:california|san francisco|bay area|los angeles|san jose|san diego)\b|,\s*CA\b/i.test(leadingContext) ? 4 : 0;
+    const disclosureScore = /\b(?:base salary|salary range|base pay|compensation range)\b/i.test(nearby) ? 2 : 0;
+    candidates.push({
+      min,
+      max,
+      currency: "USD",
+      period,
+      annualMin: Math.round(min * multiplier),
+      annualMax: Math.round(max * multiplier),
+      sourceText: match[0].trim(),
+      score: locationScore + disclosureScore + (explicitlyUsd ? 1 : 0),
+      offset
+    });
+  }
+
+  const best = candidates.sort((left, right) => right.score - left.score || left.offset - right.offset)[0];
+  if (!best) return unknown;
+  return {
+    min: best.min,
+    max: best.max,
+    currency: best.currency,
+    period: best.period,
+    annualMin: best.annualMin,
+    annualMax: best.annualMax,
+    sourceText: best.sourceText
+  };
+}
+
+function disclosedAmount(value: string | undefined): number | null {
+  if (!value) return null;
+  const normalized = value.replace(/,/g, "").replace(/\s+/g, "");
+  const multiplier = /k$/i.test(normalized) ? 1_000 : 1;
+  const parsed = Number(normalized.replace(/k$/i, ""));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed * multiplier : null;
+}
+
+function disclosedPeriod(nearby: string, min: number, max: number): "hour" | "year" | null {
+  if (/\b(?:hourly|per hour|an hour)\b|\/\s*(?:hr|hour)\b/i.test(nearby)) return "hour";
+  if (/\b(?:annual|annually|yearly|per year|base salary|salary range)\b|\/\s*(?:yr|year)\b/i.test(nearby)) return "year";
+  if (/\b(?:base pay|compensation range)\b/i.test(nearby) && min >= 10_000 && max >= 10_000) return "year";
+  return null;
 }
 
 function normalizeSalary(value: unknown): CanonicalJob["salary"] {
@@ -118,7 +199,10 @@ function extractLocation(posting: UnknownRecord, envelope: UnknownRecord) {
   const locations = Array.isArray(posting.jobLocation) ? posting.jobLocation : [posting.jobLocation];
   for (const value of locations) {
     const place = asRecord(value); const address = asRecord(place.address ?? value);
-    const text = [address.addressLocality, address.addressRegion, address.addressCountry].map(firstText).filter(Boolean).join(", ");
+    const text = [address.addressLocality, address.addressRegion, address.addressCountry]
+      .map((value) => firstText(value))
+      .filter(Boolean)
+      .join(", ");
     if (text) return text;
   }
   return firstText(envelope.location, posting.jobLocationType) || "Location not specified";
@@ -151,7 +235,16 @@ function numberOrNull(value: unknown) {
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
-function cleanText(value: string) { return sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, " ").trim(); }
+function cleanText(value: string) {
+  // Greenhouse's API can return an HTML fragment whose tags and entities are
+  // encoded one extra time. Decode at most two layers, then strip all markup.
+  // The bounded passes handle `&lt;span&gt;...&amp;mdash;...` without recursively
+  // expanding attacker-controlled entity text.
+  const decoded = decodeHTML(decodeHTML(value));
+  return sanitizeHtml(decoded, { allowedTags: [], allowedAttributes: {} })
+    .replace(/\s+/g, " ")
+    .trim();
+}
 function firstUrl(...values: unknown[]): string | null {
   for (const value of values) {
     if (typeof value !== "string") continue;

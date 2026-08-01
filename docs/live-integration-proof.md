@@ -24,6 +24,21 @@ Verified on 2026-07-31 against the configured Apify account and Elastic Serverle
 - The six-hour schedule now targets the Apify and Elastic sponsor sources
 - Saved official-Actor Task: `TvuuqUw3sThzhzUqr` (`workwink-sponsor-job-scraper`), runnable directly from Apify Console
 
+### California software compensation run
+
+- Official Actor run: `09XJwPqne2cc1k6ZF`
+- Dataset: `DVn3F5MwrHS2QQrSo`
+- Sources: Anthropic, Scale AI, and Reddit public Greenhouse APIs
+- Actor result: 3 requests succeeded, 0 failed; 803 dataset records
+- Apify-reported cost: `$0.004151372085736856`
+- Import result: 803 collected, 803 accepted, 803 indexed, 0 rejected, 0 bulk failures
+- Live job-document count after the import: 1,075
+- Elasticsearch salary query: 143 software-engineering jobs with a non-null disclosed annual range
+- Company facet counts: Anthropic 82, Scale AI 33, Reddit 27, OpenAI 1
+- Measured Elasticsearch execution: 9 ms overall; company verification queries completed in 60–69 ms
+
+Greenhouse pay-transparency fragments arrived as double-encoded HTML. The normalizer now decodes at most two entity layers, strips all markup, and extracts only explicit USD ranges with salary or annual context. It preserves the exact matched disclosure in `salary.sourceText`; single dollar values and unrelated budget ranges remain unknown. Replaying the same run with `--force` was an idempotent upsert and did not spend additional Apify credits.
+
 The first probe against Anthropic's Greenhouse board crawled 56 pages with zero request failures but emitted no `JobPosting` JSON-LD. WorkWink did not invent fallback records; the source was replaced with a board that publishes the required structured contract.
 
 ## Elasticsearch
