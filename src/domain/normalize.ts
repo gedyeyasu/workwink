@@ -146,9 +146,19 @@ function normalizePeriod(value: string): CanonicalJob["salary"]["period"] {
 
 function normalizeCurrency(value: string) { const code = value.trim().toUpperCase(); return /^[A-Z]{3}$/.test(code) ? code : null; }
 function isoDate(value: unknown) { if (!value) return null; const date = new Date(String(value)); return Number.isNaN(date.valueOf()) ? null : date.toISOString(); }
-function numberOrNull(value: unknown) { const number = Number(value); return Number.isFinite(number) && number >= 0 ? number : null; }
+function numberOrNull(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
 function cleanText(value: string) { return sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).replace(/\s+/g, " ").trim(); }
-function firstUrl(...values: unknown[]) { for (const value of values) { if (typeof value !== "string") continue; try { return new URL(value).toString(); } catch { /* continue */ } } return ""; }
+function firstUrl(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    try { return new URL(value).toString(); } catch { /* continue */ }
+  }
+  return null;
+}
 function firstText(...values: unknown[]): string { for (const value of values.flat()) if (typeof value === "string" && value.trim()) return value.trim(); return ""; }
 function uniqueStrings(value: unknown) { const values = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[,|]/) : []; return [...new Set(values.map((item) => String(item).trim()).filter(Boolean))]; }
 function asRecord(value: unknown): UnknownRecord { return value && typeof value === "object" && !Array.isArray(value) ? value as UnknownRecord : {}; }

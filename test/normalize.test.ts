@@ -31,4 +31,21 @@ describe("normalizeApifyJob", () => {
   it("rejects records without core job fields instead of inventing them", () => {
     expect(() => normalizeApifyJob({ sourceUrl: "https://example.com/job" }, "run-1")).toThrow(NormalizationError);
   });
+
+  it("keeps an absent salary unknown instead of converting null to zero", () => {
+    const job = normalizeApifyJob({
+      sourceUrl: "https://jobs.ashbyhq.com/linear/12345678-1234-1234-1234-123456789012",
+      scrapedAt: "2026-07-31T12:00:00.000Z",
+      provider: "ashby",
+      jobPosting: {
+        "@type": "JobPosting",
+        title: "Product Engineer",
+        description: "Build a reliable product with TypeScript.",
+        hiringOrganization: { name: "Linear" },
+        jobLocationType: "TELECOMMUTE"
+      }
+    }, "run-no-salary");
+
+    expect(job.salary).toMatchObject({ min: null, max: null, annualMin: null, annualMax: null });
+  });
 });

@@ -13,6 +13,9 @@ Verified on 2026-07-31 against the configured Apify account and Elastic Serverle
 - Recurring schedule: `IctqdM98NGHqgvCiE`
 - Schedule: enabled, exclusive, `0 */6 * * *`, UTC
 - Scheduled source: Linear's public Ashby board
+- Full board run: `jK87hMMOIi8cPaXf6`
+- Full board dataset: `I1C3r3yPEGieIwgyI`
+- Full board result: 46 requests succeeded, 0 failed; 46 records accepted and indexed, 0 rejected or failed
 
 The first probe against Anthropic's Greenhouse board crawled 56 pages with zero request failures but emitted no `JobPosting` JSON-LD. WorkWink did not invent fallback records; the source was replaced with a board that publishes the required structured contract.
 
@@ -38,7 +41,7 @@ Importer result for `pro8KQQYrA91RYFMR`:
 }
 ```
 
-The production search endpoint returned the real OpenAI Workday Engineer document with an Elasticsearch score, three highlighted evidence fragments, salary and freshness metadata, source provenance, and non-empty work-mode, seniority, title-family, skill, company, and employment-type aggregations. The measured Elasticsearch request took 184 ms.
+The production search endpoint returned the real OpenAI Workday Engineer document with an Elasticsearch score, three highlighted evidence fragments, salary and freshness metadata, source provenance, and non-empty work-mode, seniority, title-family, skill, company, and employment-type aggregations. The measured query request took 184 ms. After the full Linear import, an unfiltered 365-day query returned 20 current roles, a signed next-page cursor, multi-value facet buckets, and 11 ms Elasticsearch execution time.
 
 ## Reproduce
 

@@ -21,7 +21,7 @@ export type IngestionResult = {
 
 type RunState = IngestionResult & { actorId: string; startedAt: string; finishedAt: string };
 
-export async function ingestApifyRun(runId: string): Promise<IngestionResult> {
+export async function ingestApifyRun(runId: string, options: { force?: boolean } = {}): Promise<IngestionResult> {
   if (!runId.trim()) throw new Error("An Apify run id is required.");
   const apifyConfig = requireApifyConfig();
   const apify = createApifyClient(apifyConfig.APIFY_TOKEN);
@@ -29,7 +29,7 @@ export async function ingestApifyRun(runId: string): Promise<IngestionResult> {
   await setupElasticIndices(elastic);
 
   const existing = await getRunState(runId);
-  if (existing?.status === "complete") return stripRunState(existing);
+  if (existing?.status === "complete" && !options.force) return stripRunState(existing);
 
   const [run, actor] = await Promise.all([
     apify.run(runId).get(),
