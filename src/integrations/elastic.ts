@@ -43,7 +43,7 @@ export function createElasticClient(): Client {
     node,
     auth: { apiKey },
     maxRetries: 3,
-    requestTimeout: 30_000,
+    requestTimeout: 90_000,
     sniffOnStart: false
   });
 }
