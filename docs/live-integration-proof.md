@@ -16,6 +16,12 @@ Verified on 2026-07-31 against the configured Apify account and Elastic Serverle
 - Full board run: `jK87hMMOIi8cPaXf6`
 - Full board dataset: `I1C3r3yPEGieIwgyI`
 - Full board result: 46 requests succeeded, 0 failed; 46 records accepted and indexed, 0 rejected or failed
+- Sponsor run: `oQOKuuV18iF7mq0HV`
+- Sponsor dataset: `ms1hr1R6oVhex0nj9`
+- Sponsor sources: Apify's public Ashby careers board and Elastic's public Greenhouse board API
+- Sponsor crawl result: 29 requests succeeded, 0 failed; 260 Actor dataset records
+- Sponsor import result: 261 collected, 261 accepted, 261 indexed, 0 rejected, 0 bulk failures
+- The six-hour schedule now targets the Apify and Elastic sponsor sources
 
 The first probe against Anthropic's Greenhouse board crawled 56 pages with zero request failures but emitted no `JobPosting` JSON-LD. WorkWink did not invent fallback records; the source was replaced with a board that publishes the required structured contract.
 
@@ -27,6 +33,9 @@ The first probe against Anthropic's Greenhouse board crawled 56 pages with zero 
 - Read alias: `workwink-jobs-read`
 - Write alias: `workwink-jobs-write`
 - Ingestion ledger: `workwink-ingestion-runs`
+- AI profile cache: `workwink-ai-job-profiles-v1`
+- Native NVIDIA inference endpoint: `workwink-nemotron`
+- Live document count after the sponsor import: 272 (stable IDs retain prior verified runs)
 
 Importer result for `pro8KQQYrA91RYFMR`:
 
@@ -47,7 +56,7 @@ The production search endpoint returned the real OpenAI Workday Engineer documen
 
 ```bash
 pnpm setup:elastic
-pnpm apify:run -- https://jobs.ashbyhq.com/linear
+pnpm apify:run -- https://jobs.ashbyhq.com/apify 'https://boards-api.greenhouse.io/v1/boards/elastic/jobs?content=true'
 pnpm ingest:run -- <RUN_ID>
 pnpm dev
 ```

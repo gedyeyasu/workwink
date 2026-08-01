@@ -9,7 +9,9 @@ WorkWink turns public company career boards into a fresh job-discovery feed. Api
 
 The web application sends every search and filter change to Elasticsearch. Exact constraints run in filter context, free text uses boosted lexical fields, and an optional `semantic_text` field enables semantic retrieval when an inference endpoint is configured. Elasticsearch also computes the facet counts shown beside filters. The UI debounces requests for 150 ms, aborts superseded searches, stores filter state in the URL, and keeps pagination stable with a signed `search_after` cursor.
 
-This document separates what is implemented from the reviewed startup architecture. That distinction matters in the presentation: the live integration spine is real, while account creation, resume matching, persistent swipes, learned ranking, and application-package generation are the next product layer.
+For the sponsor demo, a PDF résumé is parsed in memory with PDF.js and immediately discarded. The browser receives only a compact profile containing skills with page/offset evidence, inferred target roles, and Austin/remote/hybrid preferences. Match scores remain deterministic and explainable. Separately, Elasticsearch's native NVIDIA inference service calls `workwink-nemotron` to generate dating-profile-style job summaries. The response is schema-validated, evidence quotes are checked against source text, and successful results are cached by job ID and source content hash. Nemotron never overwrites authoritative title, employer, location, salary, source URL, or filter fields.
+
+This document separates what is implemented from the reviewed startup architecture. The live integration spine, PDF résumé profile, session match score, and Nemotron card enrichment are real. Account creation, persistent swipes, learned ranking, and application-package generation are the next product layer.
 
 ## Status at a glance
 
@@ -33,7 +35,10 @@ This document separates what is implemented from the reviewed startup architectu
 | Signed cursor pagination | Implemented | HMAC-bound query fingerprint plus `search_after` tuple, valid for 24 hours |
 | Point-in-time pagination | Planned, not implemented | Current cursor does not hold an Elasticsearch PIT, so concurrent index updates can shift later pages |
 | Fast filter and swipe-card UI | Implemented | 150 ms debounce, request cancellation, URL state, counts, empty/error/degraded states |
-| Durable swipe learning and resume match score | Planned, not implemented | Current swipes only move cards locally; right swipe opens the source role |
+| Secure PDF résumé profile | Implemented | Multipart upload, 5 MiB/12-page limits, in-memory PDF.js extraction, evidence spans, no raw résumé storage |
+| Evidence-backed match score | Implemented for the live session | Deterministic skill, target-role, and work-mode components; persistent learning remains next |
+| Nemotron profiles through Elastic | Implemented | Native Elastic NVIDIA inference, strict response schema, evidence validation, content-hash cache index |
+| Durable swipe learning | Planned | Current swipes move cards locally; right swipe opens the real source role |
 
 ## Product experience
 
