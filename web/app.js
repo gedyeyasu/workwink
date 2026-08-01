@@ -25,6 +25,9 @@
     saveJob: $("#saveJob"),
     loadMore: $("#loadMore"),
     template: $("#jobCardTemplate")
+    ,resumeForm: $("#resumeForm")
+    ,resumeFile: $("#resumeFile")
+    ,profileResult: $("#profileResult")
   };
 
   const state = {
@@ -35,7 +38,8 @@
     debounceTimer: null,
     requestSerial: 0,
     hasSearched: false,
-    loadingMore: false
+    loadingMore: false,
+    profile: null
   };
 
   function splitValues(value) {
@@ -246,8 +250,55 @@
       skillList.append(badge);
     });
     card.dataset.applyUrl = applyLink.href;
+    card.dataset.jobId = job.jobId;
+    const match = matchJob(job);
+    if (match) {
+      const badge = $("[data-field=match]", card);
+      badge.textContent = `${match.score}% match`;
+      badge.title = match.reasons.join(" · ");
+      badge.classList.remove("hidden");
+    }
     attachSwipe(card);
     return card;
+  }
+
+  function matchJob(job) {
+    if (!state.profile) return null;
+    const candidateSkills = new Set(state.profile.skills.map((item) => item.name.toLowerCase()));
+    const jobSkills = (job.skills || []).map((item) => item.toLowerCase());
+    const matchedSkills = jobSkills.filter((item) => candidateSkills.has(item));
+    const roleMatch = state.profile.targetRoles.values.some((role) => {
+      const words = role.toLowerCase().split(/\s+/).filter((word) => word.length > 3);
+      return words.some((word) => (job.title || "").toLowerCase().includes(word));
+    });
+    const workModeMatch = state.profile.preferences.workModes.values.includes(job.workMode);
+    const skillScore = Math.min(60, matchedSkills.length * 12);
+    const score = Math.min(99, 20 + skillScore + (roleMatch ? 15 : 0) + (workModeMatch ? 5 : 0));
+    const reasons = [
+      ...matchedSkills.slice(0, 4).map((skill) => `Resume evidence: ${skill}`),
+      ...(roleMatch ? ["Target-role alignment"] : []),
+      ...(workModeMatch ? [`${job.workMode} preference`] : [])
+    ];
+    return { score, reasons };
+  }
+
+  async function enrichTopCard() {
+    const card = $(".job-card:last-child", els.stage);
+    if (!card?.dataset.jobId || card.dataset.aiLoaded) return;
+    card.dataset.aiLoaded = "loading";
+    try {
+      const response = await fetch(`/api/ai/jobs/${encodeURIComponent(card.dataset.jobId)}/profile`, { headers: { accept: "application/json" } });
+      if (!response.ok) return;
+      const body = await response.json();
+      const profile = body.profile;
+      if (!profile) return;
+      $("[data-field=ai-one-liner]", card).textContent = profile.oneLiner;
+      $("[data-field=ai-mission]", card).textContent = profile.mission;
+      $("[data-field=ai-profile]", card).classList.remove("hidden");
+      card.dataset.aiLoaded = "true";
+    } catch {
+      card.dataset.aiLoaded = "failed";
+    }
   }
 
   function renderDeck() {
@@ -261,6 +312,7 @@
     els.loadMore.classList.toggle("hidden", !state.nextCursor || state.jobs.length > 5);
     els.loadMore.disabled = false;
     els.loadMore.textContent = "Load more matches";
+    void enrichTopCard();
   }
 
   function renderResponse(response, append) {
@@ -420,6 +472,44 @@
   els.passJob.addEventListener("click", () => dismiss("left"));
   els.saveJob.addEventListener("click", () => dismiss("right", true));
   els.loadMore.addEventListener("click", () => void performSearch({ append: true }));
+  els.resumeFile.addEventListener("change", () => {
+    const file = els.resumeFile.files?.[0];
+    if (file) $(".resume-picker").textContent = file.name;
+  });
+  els.resumeForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const file = els.resumeFile.files?.[0];
+    if (!file) return;
+    const submit = $("button[type=submit]", els.resumeForm);
+    submit.disabled = true;
+    submit.textContent = "Reading résumé…";
+    els.profileResult.classList.remove("hidden");
+    els.profileResult.textContent = "Extracting evidence from your PDF…";
+    try {
+      const form = new FormData();
+      form.append("resume", file);
+      form.append("preferences", JSON.stringify({
+        location: { city: "Austin", region: "Texas", radiusMiles: 50 },
+        workModes: ["remote", "hybrid"]
+      }));
+      const response = await fetch("/api/profile/resume", { method: "POST", body: form });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.error?.message || "Resume parsing failed.");
+      state.profile = body.profile;
+      const skills = state.profile.skills.map((item) => item.name);
+      els.query.value = state.profile.targetRoles.values[0] || "software engineer";
+      els.skills.value = skills.slice(0, 8).join(", ");
+      $$("[data-filter-group=workMode] .filter-chip").forEach((chip) => chip.classList.toggle("active", state.profile.preferences.workModes.values.includes(chip.dataset.value)));
+      els.profileResult.innerHTML = `<strong>Profile ready</strong><span>${state.profile.targetRoles.values.join(" · ")}</span><span>${skills.length} evidenced skills · Austin, Texas · remote/hybrid</span><small>${state.profile.extraction.pageCount} pages parsed; raw résumé stored: no</small>`;
+      await performSearch();
+      els.workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (error) {
+      els.profileResult.textContent = error.message || "Resume parsing failed.";
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Build my profile";
+    }
+  });
 
   restoreUrlState();
   renderActiveFilters();

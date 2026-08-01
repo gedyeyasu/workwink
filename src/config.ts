@@ -18,6 +18,7 @@ const schema = z.object({
   ELASTIC_TOKEN: z.string().min(1).optional(),
   ELASTICSEARCH_INDEX_PREFIX: z.string().regex(/^[a-z0-9-]+$/).default("workwink"),
   ELASTICSEARCH_INFERENCE_ID: z.string().min(1).optional(),
+  ELASTIC_NVIDIA_INFERENCE_ID: z.string().min(1).default("workwink-nemotron"),
   ELASTIC_SEARCH_MODE: z.enum(["lexical", "hybrid"]).default("lexical"),
   ADMIN_TOKEN: z.string().min(24).optional(),
   CURSOR_SECRET: z.string().min(32).optional()
@@ -33,7 +34,8 @@ export const config = {
   elasticApiKey: parsed.data.ELASTICSEARCH_API_KEY ?? parsed.data.ELASTIC_TOKEN,
   jobsAlias: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-jobs-read`,
   jobsWriteAlias: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-jobs-write`,
-  runsIndex: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-ingestion-runs`
+  runsIndex: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-ingestion-runs`,
+  jobProfilesIndex: `${parsed.data.ELASTICSEARCH_INDEX_PREFIX}-ai-job-profiles-v1`
 };
 
 export function requireApifyConfig() {

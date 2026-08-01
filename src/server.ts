@@ -8,6 +8,7 @@ import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyError } from "fastify";
 import { ZodError } from "zod";
 import { config } from "./config.js";
+import { aiRoutes } from "./routes/ai.js";
 import { adminRoutes, type TriggerIngestion } from "./routes/admin.js";
 import { apifyWebhookRoutes } from "./routes/apify-webhook.js";
 import { healthRoutes, type DependencyStatus } from "./routes/health.js";
@@ -121,6 +122,7 @@ export async function buildServer() {
   await app.register(healthRoutes, { prefix: "/api", startedAt, dependencies });
   await app.register(searchRoutes, { prefix: "/api", searchJobs });
   await app.register(resumeRoutes, { prefix: "/api" });
+  await app.register(aiRoutes, { prefix: "/api" });
   await app.register(adminRoutes, {
     prefix: "/api",
     ...(config.ADMIN_TOKEN ? { adminToken: config.ADMIN_TOKEN } : {}),

@@ -42,6 +42,16 @@
         <button type="button" data-query="Product designer">Product designer</button>
         <button type="button" data-query="Growth lead">Growth lead</button>
       </div>
+      <form class="resume-onboarding" id="resumeForm">
+        <div>
+          <strong>Start with your résumé</strong>
+          <span>PDF only · parsed in memory · raw file never stored</span>
+        </div>
+        <label class="resume-picker" for="resumeFile">Choose PDF</label>
+        <input class="sr-only" id="resumeFile" name="resume" type="file" accept="application/pdf,.pdf" required>
+        <button type="submit">Build my profile</button>
+      </form>
+      <div class="profile-result hidden" id="profileResult" role="status"></div>
     </section>
 
     <section class="workspace" id="workspace" aria-labelledby="resultsHeading">
@@ -149,13 +159,18 @@
         <div class="card-source"><span class="live-pip"></span><span data-field="freshness"></span></div>
       </div>
       <div class="job-body">
-        <p class="company-name" data-field="company"></p>
+        <div class="card-signal-row"><p class="company-name" data-field="company"></p><span class="match-score hidden" data-field="match"></span></div>
         <h3 data-field="title"></h3>
         <div class="job-meta">
           <span data-field="location"></span>
           <span data-field="salary"></span>
         </div>
         <p class="job-description" data-field="description"></p>
+        <div class="ai-profile hidden" data-field="ai-profile">
+          <span>ELASTIC × NVIDIA NEMOTRON</span>
+          <strong data-field="ai-one-liner"></strong>
+          <p data-field="ai-mission"></p>
+        </div>
         <div class="skill-list" data-field="skills"></div>
       </div>
       <footer class="card-footer">

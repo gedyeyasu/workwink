@@ -93,7 +93,7 @@ function lexicalClause(query: string): Query {
         {
           multi_match: {
             query,
-            fields: ["title^6", "titleFamily^4", "skills^4", "companyName^3", "requirements^2", "description", "searchText"],
+            fields: ["title^6", "titleFamily^4", "skills^4", "companyName^3", "location^3", "requirements^2", "description", "searchText"],
             type: "best_fields",
             operator: "and",
             fuzziness: "AUTO"
