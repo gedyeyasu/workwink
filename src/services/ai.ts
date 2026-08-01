@@ -91,7 +91,14 @@ function sourceMaterial(job: CanonicalJob): string {
   return [job.title, job.companyName, job.location, job.description, job.requirements, ...job.skills]
     .filter(Boolean)
     .join("\n")
-    .slice(0, 18_000);
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&amp;/gi, "&")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&(?:nbsp|mdash|rsquo|lsquo|quot);/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 9_000);
 }
 
 function promptFor(job: CanonicalJob): string {
@@ -131,7 +138,7 @@ export async function getJobProfile(jobId: string): Promise<{ profile: JobProfil
     inference_id: config.ELASTIC_NVIDIA_INFERENCE_ID,
     input: promptFor(job),
     timeout: "60s"
-  });
+  }, { requestTimeout: 90_000, maxRetries: 1 });
   const output = response.completion[0]?.result;
   if (!output) throw new AiProfileError("AI_EMPTY_RESPONSE", "Nemotron returned an empty job profile.", 502);
   const parsed = validateEvidence(jobProfileSchema.parse(jsonFromModel(output)), job);
