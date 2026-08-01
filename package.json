@@ -23,11 +23,13 @@
   "dependencies": {
     "@elastic/elasticsearch": "latest",
     "@fastify/cors": "latest",
+    "@fastify/multipart": "latest",
     "@fastify/rate-limit": "latest",
     "@fastify/static": "latest",
     "apify-client": "latest",
     "dotenv": "latest",
     "fastify": "latest",
+    "pdfjs-dist": "latest",
     "sanitize-html": "latest",
     "zod": "latest"
   },

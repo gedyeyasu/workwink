@@ -59,6 +59,15 @@ describe("official Apify Web Scraper input", () => {
     );
   });
 
+  it("accepts Elastic's public Greenhouse board API as a real structured source", () => {
+    const input = buildWebScraperInput([
+      "https://boards-api.greenhouse.io/v1/boards/elastic/jobs?content=true"
+    ]);
+    expect(input.startUrls[0]?.url).toContain("boards-api.greenhouse.io/v1/boards/elastic/jobs");
+    expect(input.pageFunction).toContain("Greenhouse board API");
+    expect(input.pageFunction).toContain("payload.jobs");
+  });
+
   it("normalizes, deduplicates, and classifies configured board URLs", () => {
     expect(
       parseJobBoardUrls([

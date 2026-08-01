@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
+import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyError } from "fastify";
 import { ZodError } from "zod";
@@ -10,6 +11,7 @@ import { config } from "./config.js";
 import { adminRoutes, type TriggerIngestion } from "./routes/admin.js";
 import { apifyWebhookRoutes } from "./routes/apify-webhook.js";
 import { healthRoutes, type DependencyStatus } from "./routes/health.js";
+import { resumeRoutes } from "./routes/resume.js";
 import { searchRoutes, SearchUnavailableError, type SearchJobs } from "./routes/search.js";
 
 const startedAt = Date.now();
@@ -60,6 +62,16 @@ export async function buildServer() {
       }
     })
   });
+  await app.register(multipart, {
+    limits: {
+      fileSize: 5 * 1_024 * 1_024,
+      files: 1,
+      fields: 1,
+      parts: 2,
+      fieldSize: 16 * 1_024
+    },
+    throwFileSizeLimit: true
+  });
 
   app.setErrorHandler((error: FastifyError | ZodError | Error, request, reply) => {
     if (error instanceof ZodError || ("issues" in error && Array.isArray(error.issues))) {
@@ -108,6 +120,7 @@ export async function buildServer() {
 
   await app.register(healthRoutes, { prefix: "/api", startedAt, dependencies });
   await app.register(searchRoutes, { prefix: "/api", searchJobs });
+  await app.register(resumeRoutes, { prefix: "/api" });
   await app.register(adminRoutes, {
     prefix: "/api",
     ...(config.ADMIN_TOKEN ? { adminToken: config.ADMIN_TOKEN } : {}),

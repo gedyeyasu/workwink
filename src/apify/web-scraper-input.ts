@@ -3,6 +3,7 @@ export const OFFICIAL_WEB_SCRAPER_ACTOR_ID = "apify/web-scraper" as const;
 export const SUPPORTED_JOB_BOARD_HOSTS = [
   "boards.greenhouse.io",
   "job-boards.greenhouse.io",
+  "boards-api.greenhouse.io",
   "jobs.lever.co",
   "jobs.ashbyhq.com"
 ] as const;
@@ -56,6 +57,7 @@ export const JOB_BOARD_PAGE_FUNCTION = String.raw`async function pageFunction(co
     function providerFor(urlValue) {
         const host = new URL(urlValue).hostname.toLowerCase();
         if (host === 'boards.greenhouse.io' || host === 'job-boards.greenhouse.io') return 'greenhouse';
+        if (host === 'boards-api.greenhouse.io') return 'greenhouse';
         if (host === 'jobs.lever.co') return 'lever';
         if (host === 'jobs.ashbyhq.com') return 'ashby';
         return null;
@@ -89,6 +91,60 @@ export const JOB_BOARD_PAGE_FUNCTION = String.raw`async function pageFunction(co
     if (!provider) {
         context.log.warning('Ignoring unsupported job-board host', { pageUrl });
         return null;
+    }
+
+    // Some companies, including Elastic, use a custom careers frontend while
+    // retaining Greenhouse's public board API. With content=true, one official
+    // Actor request yields the complete public board JSON. Convert each record
+    // into the same JobPosting envelope used by HTML sources.
+    if (new URL(pageUrl).hostname === 'boards-api.greenhouse.io') {
+        let payload;
+        try {
+            payload = JSON.parse(document.body.innerText || document.body.textContent || '');
+        } catch (error) {
+            throw new Error('Greenhouse board API did not return valid JSON: ' + String(error));
+        }
+        const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+        const pathParts = new URL(pageUrl).pathname.split('/').filter(Boolean);
+        const boardToken = pathParts[pathParts.indexOf('boards') + 1] || 'Company';
+        const companyName = boardToken.charAt(0).toUpperCase() + boardToken.slice(1);
+        return jobs.flatMap((job) => {
+            if (!job || typeof job !== 'object' || !job.id || !job.title || !job.absolute_url || !job.content) return [];
+            const sourceUrl = normalizeUrl(job.absolute_url);
+            return [{
+                schemaVersion: context.customData.schemaVersion,
+                sourceActor: context.customData.sourceActor,
+                provider: 'greenhouse',
+                sourceUrl,
+                scrapedAt: extractedAt,
+                pageUrl,
+                requestedUrl,
+                canonicalUrl: sourceUrl,
+                crawledAt: extractedAt,
+                jobPosting: {
+                    '@context': 'https://schema.org/',
+                    '@type': 'JobPosting',
+                    title: job.title,
+                    description: job.content,
+                    identifier: { '@type': 'PropertyValue', name: companyName, value: String(job.id) },
+                    hiringOrganization: { '@type': 'Organization', name: companyName },
+                    jobLocation: job.location && job.location.name
+                        ? { '@type': 'Place', address: { '@type': 'PostalAddress', addressLocality: job.location.name } }
+                        : undefined,
+                    datePosted: job.first_published || job.updated_at || undefined,
+                    url: sourceUrl
+                },
+                provenance: {
+                    actor: context.customData.sourceActor,
+                    provider: 'greenhouse',
+                    requestedUrl,
+                    loadedUrl: pageUrl,
+                    canonicalUrl: sourceUrl,
+                    greenhouseJobId: String(job.id),
+                    extractedAt
+                }
+            }];
+        });
     }
 
     const discovered = new Set();
